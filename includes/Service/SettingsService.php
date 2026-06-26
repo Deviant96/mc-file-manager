@@ -36,6 +36,7 @@ class SettingsService {
 			'theme'               => 'vscode', // 'vscode' | 'wordpress'.
 			'uninstall_drop_data' => false,
 			'uninstall_drop_files' => false,
+			'role_folder_rules'   => array(),
 		);
 	}
 
@@ -99,6 +100,13 @@ class SettingsService {
 		}
 		if ( 'theme' === $key ) {
 			return in_array( $value, array( 'vscode', 'wordpress' ), true ) ? $value : $default;
+		}
+		if ( 'role_folder_rules' === $key ) {
+			if ( is_string( $value ) ) {
+				$decoded = json_decode( $value, true );
+				return is_array( $decoded ) ? $decoded : array();
+			}
+			return is_array( $value ) ? $value : array();
 		}
 		return sanitize_text_field( (string) $value );
 	}

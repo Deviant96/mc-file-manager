@@ -40,6 +40,7 @@ async function activate() {
       </span>
       <span class="dashicons mcfm-icon-folder" :class="node.expanded ? 'dashicons-open-folder' : 'dashicons-portfolio'"></span>
       <span class="mcfm-name-text">{{ node.name }}</span>
+      <span v-if="store.isTreeNodeLoading(node.path)" class="mcfm-spinner" style="width:12px;height:12px;margin-left:auto"></span>
     </div>
     <div v-if="node.expanded" class="mcfm-tree-children">
       <TreeNode

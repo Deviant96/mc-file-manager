@@ -7,6 +7,7 @@
 
 namespace MCFM\Admin;
 
+use MCFM\Pro;
 use MCFM\Security\SecurityService;
 use MCFM\Service\SettingsService;
 
@@ -92,6 +93,7 @@ class AdminPage {
 					'name' => wp_get_current_user()->display_name,
 				),
 				'version'   => MCFM_VERSION,
+				'isPro'     => Pro::is_active(),
 			)
 		);
 	}

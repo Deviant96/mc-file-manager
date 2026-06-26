@@ -22,6 +22,11 @@ use MCFM\Service\PreviewService;
 use MCFM\Service\RevisionService;
 use MCFM\Service\SettingsService;
 use MCFM\Service\TrashService;
+use MCFM\Service\RecentlyOpenedService;
+use MCFM\Service\OpenRegistryService;
+use MCFM\Service\ZipService;
+use MCFM\Service\AdvancedSearchService;
+use MCFM\Service\RoleFolderService;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -75,6 +80,13 @@ final class Plugin {
 		$trash    = new TrashService( $filesystem, $resolver, $trash_repo, $this->trash_dir() );
 		$revision = new RevisionService( $filesystem, $resolver, $snapshots_repo, $this->snapshot_dir(), $settings );
 		$preview  = new PreviewService( $filesystem, $resolver );
+		$recent   = new RecentlyOpenedService();
+		$registry = new OpenRegistryService();
+		$zip      = new ZipService( $filesystem, $security );
+		$adv_search = new AdvancedSearchService();
+
+		$role_folders = new RoleFolderService( $settings, $resolver );
+		$role_folders->register();
 
 		$this->services = array(
 			'settings_repo'  => $settings_repo,
@@ -89,6 +101,10 @@ final class Plugin {
 			'trash'          => $trash,
 			'revision'       => $revision,
 			'preview'        => $preview,
+			'recent'         => $recent,
+			'open_registry'  => $registry,
+			'zip'            => $zip,
+			'advanced_search' => $adv_search,
 		);
 	}
 

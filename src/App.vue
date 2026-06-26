@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, reactive, computed, watch } from 'vue';
+import { onMounted, onBeforeUnmount, ref, reactive, computed, watch } from 'vue';
 import { useFileManager } from './stores/fileManager';
 import { api } from './api/client';
 import Toolbar from './components/Toolbar.vue';
@@ -18,6 +18,9 @@ import TrashModal from './components/modals/TrashModal.vue';
 import LogsModal from './components/modals/LogsModal.vue';
 
 const store = useFileManager();
+const toolbarRef = ref(null);
+const mobilePane = ref('files');
+const isMobile = ref(window.innerWidth <= 768);
 
 const theme = computed(() => store.settings.theme || 'vscode');
 
@@ -129,6 +132,46 @@ function renameEntry(entry) {
     onConfirm: (name) => name && name !== entry.name && store.rename(entry.path, name),
   });
 }
+function onResize() {
+  isMobile.value = window.innerWidth <= 768;
+}
+
+function createZip() {
+  if (!store.selection.length) return;
+  askPrompt({
+    title: 'Create ZIP archive',
+    label: 'Archive name',
+    value: 'archive.zip',
+    onConfirm: async (name) => {
+      if (!name) return;
+      try {
+        await api.createArchive(store.selection, name.endsWith('.zip') ? name : `${name}.zip`, store.currentPath);
+        store.notify('ZIP archive created', 'success', 2000);
+        store.refresh();
+      } catch (e) {
+        store.notify(e.message, 'error');
+      }
+    },
+  });
+}
+
+function extractZip(entry) {
+  askConfirm({
+    title: 'Extract ZIP',
+    message: `Extract "${entry.name}" into the current folder?`,
+    confirmLabel: 'Extract',
+    onConfirm: async () => {
+      try {
+        await api.extractArchive(entry.path, store.currentPath);
+        store.notify('Archive extracted', 'success', 2000);
+        store.refresh();
+      } catch (e) {
+        store.notify(e.message, 'error');
+      }
+    },
+  });
+}
+
 function deleteEntries(paths) {
   if (!paths.length) return;
   askConfirm({
@@ -166,6 +209,9 @@ function handleContextAction(action) {
     case 'download':
       if (entry && !entry.isDir) window.open(api.downloadUrl(entry.path), '_blank');
       break;
+    case 'extract':
+      if (entry) extractZip(entry);
+      break;
     case 'properties':
       if (entry) modals.properties = entry.path;
       break;
@@ -191,13 +237,30 @@ function onKeydown(e) {
   } else if (e.key === 'F2' && store.selection.length === 1) {
     const entry = store.entries.find((x) => x.path === store.selection[0]);
     if (entry) renameEntry(entry);
+  } else if (e.key === 'F5') {
+    e.preventDefault();
+    store.refresh();
+  } else if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    e.preventDefault();
+    toolbarRef.value?.focusSearch();
   }
 }
 
+watch(showEditor, (visible) => {
+  if (visible && isMobile.value) mobilePane.value = 'editor';
+});
+
 onMounted(async () => {
+  window.addEventListener('resize', onResize);
   await store.loadTreeRoot();
   await store.openPath('');
+  if (api.boot.isPro) await store.loadRecent();
   window.addEventListener('keydown', onKeydown);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', onResize);
+  window.removeEventListener('keydown', onKeydown);
 });
 </script>
 
@@ -205,20 +268,33 @@ onMounted(async () => {
   <div style="display:flex;flex-direction:column;height:100%" @click="closeContext">
     <div style="display:contents">
       <Toolbar
+        ref="toolbarRef"
         @new-folder="newFolder"
         @new-file="newFile"
         @open-settings="modals.settings = true"
         @open-trash="modals.trash = true"
         @open-logs="modals.logs = true"
         @save="store.activeTab && store.saveTab(store.activeTab)"
+        @create-zip="createZip"
       />
 
       <div v-if="store.listing" class="mcfm-loading-bar"></div>
 
-      <div class="mcfm-body">
-        <TreePane @navigate="store.openPath($event)" />
+      <div v-if="isMobile" class="mcfm-mobile-tabs">
+        <button class="mcfm-mobile-tab" :class="{ active: mobilePane === 'tree' }" @click="mobilePane = 'tree'">Explorer</button>
+        <button class="mcfm-mobile-tab" :class="{ active: mobilePane === 'files' }" @click="mobilePane = 'files'">Files</button>
+        <button
+          v-if="showEditor"
+          class="mcfm-mobile-tab"
+          :class="{ active: mobilePane === 'editor' }"
+          @click="mobilePane = 'editor'"
+        >Editor</button>
+      </div>
 
-        <div class="mcfm-center">
+      <div class="mcfm-body" :class="{ 'mcfm-mobile': isMobile }">
+        <TreePane :class="{ 'mcfm-pane-active': !isMobile || mobilePane === 'tree' }" @navigate="store.openPath($event)" />
+
+        <div class="mcfm-center" :class="{ 'mcfm-pane-active': !isMobile || mobilePane === 'files' }">
           <Breadcrumbs @navigate="store.openPath($event)" />
           <FileBrowser
             @activate="activate"
@@ -230,8 +306,12 @@ onMounted(async () => {
         </div>
 
         <template v-if="showEditor">
-          <div class="mcfm-resizer" @mousedown="startResize"></div>
-          <div class="mcfm-editor-pane" :style="{ width: editorWidth + '%' }">
+          <div v-if="!isMobile" class="mcfm-resizer" @mousedown="startResize"></div>
+          <div
+            class="mcfm-editor-pane"
+            :class="{ 'mcfm-pane-active': !isMobile || mobilePane === 'editor' }"
+            :style="isMobile ? {} : { width: editorWidth + '%' }"
+          >
             <EditorPane />
           </div>
         </template>

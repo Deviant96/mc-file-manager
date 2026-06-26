@@ -11,10 +11,17 @@ let monaco = null;
 let editor = null;
 const models = new Map();
 let suppressChange = false;
+let peerTimer = null;
+let heartbeatTimer = null;
 
 const active = computed(() => store.activeTabData);
 const showTextEditor = computed(() => active.value && active.value.kind === 'text' && !active.value.tooLarge);
 const showImage = computed(() => active.value && active.value.kind === 'image');
+
+const concurrentPeers = computed(() => {
+  if (!store.activeTab) return [];
+  return store.peersForPath(store.activeTab).filter((p) => p.id !== api.boot.user?.id);
+});
 
 const editorTheme = computed(() => (store.settings.theme === 'wordpress' ? 'vs' : 'vs-dark'));
 
@@ -71,13 +78,25 @@ function syncModel() {
 
 watch(
   () => store.activeTab,
-  async () => {
+  async (path) => {
     if (showTextEditor.value) {
       await ensureEditor();
       syncModel();
     }
+    if (path) {
+      store.registerEditorOpen(path);
+      startPeerPolling(path);
+    }
   }
 );
+
+function startPeerPolling(path) {
+  clearInterval(peerTimer);
+  clearInterval(heartbeatTimer);
+  store.refreshEditorPeers(path);
+  peerTimer = setInterval(() => store.refreshEditorPeers(path), 15000);
+  heartbeatTimer = setInterval(() => api.editorHeartbeat(path), 30000);
+}
 
 watch(editorTheme, (t) => {
   if (monaco) monaco.editor.setTheme(t);
@@ -102,6 +121,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  clearInterval(peerTimer);
+  clearInterval(heartbeatTimer);
   for (const model of models.values()) model.dispose();
   models.clear();
   if (editor) editor.dispose();
@@ -123,6 +144,11 @@ onBeforeUnmount(() => {
         <span v-if="tab.dirty" class="dot">●</span>
         <span class="close dashicons dashicons-no-alt" style="font-size:14px;width:14px;height:14px" @click.stop="store.closeTab(tab.path)"></span>
       </div>
+    </div>
+
+    <div v-if="concurrentPeers.length" class="mcfm-editor-warning">
+      <span class="dashicons dashicons-warning"></span>
+      Also open by: {{ concurrentPeers.map((p) => p.name).join(', ') }}
     </div>
 
     <div v-if="showTextEditor" class="mcfm-editor-host">

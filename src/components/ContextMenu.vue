@@ -16,6 +16,7 @@ const style = computed(() => ({
 
 const hasEntry = computed(() => !!props.entry);
 const isFile = computed(() => props.entry && !props.entry.isDir);
+const isZip = computed(() => props.entry && ['zip'].includes((props.entry.ext || '').toLowerCase()));
 </script>
 
 <template>
@@ -25,6 +26,9 @@ const isFile = computed(() => props.entry && !props.entry.isDir);
     </div>
     <div v-if="isFile" class="mcfm-context-item" @click="emit('action', 'download')">
       <span class="dashicons dashicons-download"></span> Download
+    </div>
+    <div v-if="isZip" class="mcfm-context-item" @click="emit('action', 'extract')">
+      <span class="dashicons dashicons-media-archive"></span> Extract ZIP
     </div>
     <div v-if="hasEntry" class="mcfm-context-sep"></div>
     <div class="mcfm-context-item" :class="{ disabled: !hasEntry }" @click="emit('action', 'cut')">

@@ -116,8 +116,8 @@ export const api = {
   restoreSnapshot(id) {
     return request('/snapshot/restore', { method: 'POST', body: { id } });
   },
-  search(query, path) {
-    return request('/search', { params: { query, path } });
+  search(query, path, scope = 'down') {
+    return request('/search', { params: { query, path, scope } });
   },
   upload(path, file, onProgress) {
     return new Promise((resolve, reject) => {
@@ -172,5 +172,32 @@ export const api = {
   },
   updateSettings(settings) {
     return request('/settings', { method: 'POST', body: settings });
+  },
+  getRecent() {
+    return request('/recent');
+  },
+  addRecent(path) {
+    return request('/recent', { method: 'POST', body: { path } });
+  },
+  editorOpen(path) {
+    return request('/editor/open', { method: 'POST', body: { path } });
+  },
+  editorClose(path) {
+    return request('/editor/close', { method: 'POST', body: { path } });
+  },
+  editorHeartbeat(path) {
+    return request('/editor/heartbeat', { method: 'POST', body: { path } });
+  },
+  editorPeers(path) {
+    return request('/editor/peers', { params: { path } });
+  },
+  createArchive(paths, name, destination = '') {
+    return request('/archive', { method: 'POST', body: { paths, name, destination } });
+  },
+  extractArchive(path, destination = '') {
+    return request('/extract', { method: 'POST', body: { path, destination } });
+  },
+  chmod(path, mode) {
+    return request('/chmod', { method: 'POST', body: { path, mode } });
   },
 };

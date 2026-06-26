@@ -1,9 +1,12 @@
 <script setup>
-import { reactive } from 'vue';
+import { reactive, computed } from 'vue';
 import { useFileManager } from '../../stores/fileManager';
+import { api } from '../../api/client';
 
 const store = useFileManager();
 const emit = defineEmits(['close']);
+
+const isPro = computed(() => !!api.boot.isPro);
 
 const form = reactive({
   warn_before_edit: !!store.settings.warn_before_edit,
@@ -13,10 +16,11 @@ const form = reactive({
   theme: store.settings.theme || 'vscode',
   uninstall_drop_data: !!store.settings.uninstall_drop_data,
   uninstall_drop_files: !!store.settings.uninstall_drop_files,
+  role_folder_rules_json: JSON.stringify(store.settings.role_folder_rules || [], null, 2),
 });
 
 async function save() {
-  await store.saveSettings({
+  const payload = {
     warn_before_edit: form.warn_before_edit,
     max_editable_bytes: Math.max(1, form.max_editable_mb) * 1024 * 1024,
     snapshot_retention: form.snapshot_retention,
@@ -24,7 +28,16 @@ async function save() {
     theme: form.theme,
     uninstall_drop_data: form.uninstall_drop_data,
     uninstall_drop_files: form.uninstall_drop_files,
-  });
+  };
+  if (isPro.value) {
+    try {
+      payload.role_folder_rules = JSON.parse(form.role_folder_rules_json || '[]');
+    } catch (e) {
+      store.notify('Invalid role folder rules JSON', 'error');
+      return;
+    }
+  }
+  await store.saveSettings(payload);
   emit('close');
 }
 </script>
@@ -70,6 +83,22 @@ async function save() {
           <input id="drop-files" v-model="form.uninstall_drop_files" type="checkbox" />
           <label for="drop-files">Remove snapshot &amp; trash directories on uninstall</label>
         </div>
+        <template v-if="isPro">
+          <hr style="border-color:var(--mcfm-border);margin:16px 0" />
+          <div class="mcfm-pane-title" style="padding:0 0 8px">
+            Role folder visibility <span class="mcfm-pro-badge">Pro</span>
+          </div>
+          <div class="mcfm-field">
+            <label>Rules JSON (role + allowed path prefixes)</label>
+            <textarea
+              v-model="form.role_folder_rules_json"
+              class="mcfm-input"
+              rows="6"
+              style="font-family:monospace;font-size:11px"
+              placeholder='[{"role":"editor","paths":["wp-content/uploads"]}]'
+            ></textarea>
+          </div>
+        </template>
       </div>
       <div class="mcfm-modal-foot">
         <button class="mcfm-btn" @click="emit('close')">Cancel</button>

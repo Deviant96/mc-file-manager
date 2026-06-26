@@ -13,8 +13,12 @@ export const useFileManager = defineStore('fileManager', {
     breadcrumbs: [{ name: 'Root', path: '' }],
     entries: [],
     listing: false,
+    listError: null,
 
     treeRoot: { name: 'WordPress Root', path: '', children: [], expanded: true, loaded: false },
+    treeLoading: false,
+    treeError: null,
+    treeLoadingPaths: [],
 
     selection: [],
     lastSelectedIndex: -1,
@@ -24,7 +28,11 @@ export const useFileManager = defineStore('fileManager', {
     tabs: [], // { path, name, language, content, original, dirty, kind, tooLarge, entry }
     activeTab: null,
 
-    search: { query: '', active: false, results: [], running: false },
+    search: { query: '', active: false, results: [], running: false, scope: 'down' },
+
+    recentFiles: [],
+
+    editorPeers: {}, // path -> [{ id, name }]
 
     notifications: [],
 
@@ -67,6 +75,7 @@ export const useFileManager = defineStore('fileManager', {
 
     async openPath(path) {
       this.listing = true;
+      this.listError = null;
       try {
         const data = await api.list(path);
         this.currentPath = data.path;
@@ -77,6 +86,7 @@ export const useFileManager = defineStore('fileManager', {
         this.breadcrumbs = crumbs.breadcrumbs;
         this.search.active = false;
       } catch (e) {
+        this.listError = e.message;
         this.notify(e.message, 'error');
       } finally {
         this.listing = false;
@@ -92,6 +102,8 @@ export const useFileManager = defineStore('fileManager', {
     },
 
     async loadTreeRoot() {
+      this.treeLoading = true;
+      this.treeError = null;
       try {
         const data = await api.getTree();
         this.treeRoot = {
@@ -102,7 +114,10 @@ export const useFileManager = defineStore('fileManager', {
           loaded: true,
         };
       } catch (e) {
+        this.treeError = e.message;
         this.notify(e.message, 'error');
+      } finally {
+        this.treeLoading = false;
       }
     },
 
@@ -118,14 +133,21 @@ export const useFileManager = defineStore('fileManager', {
     },
 
     async loadTreeChildren(node) {
-      if (node.loaded) return;
+      if (node.loaded || this.treeLoadingPaths.includes(node.path)) return;
+      this.treeLoadingPaths.push(node.path);
       try {
         const data = await api.getChildren(node.path);
         node.children = data.children.map(this.toTreeNode);
         node.loaded = true;
       } catch (e) {
         this.notify(e.message, 'error');
+      } finally {
+        this.treeLoadingPaths = this.treeLoadingPaths.filter((p) => p !== node.path);
       }
+    },
+
+    isTreeNodeLoading(path) {
+      return this.treeLoadingPaths.includes(path);
     },
 
     // Selection -------------------------------------------------------
@@ -254,6 +276,7 @@ export const useFileManager = defineStore('fileManager', {
       const existing = this.tabs.find((t) => t.path === entry.path);
       if (existing) {
         this.activeTab = entry.path;
+        this.registerEditorOpen(entry.path);
         return existing;
       }
       try {
@@ -272,6 +295,8 @@ export const useFileManager = defineStore('fileManager', {
         };
         this.tabs.push(tab);
         this.activeTab = tab.path;
+        this.trackRecent(entry.path);
+        this.registerEditorOpen(entry.path);
         return tab;
       } catch (e) {
         this.notify(e.message, 'error');
@@ -292,6 +317,7 @@ export const useFileManager = defineStore('fileManager', {
       if (this.activeTab === path) {
         this.activeTab = this.tabs.length ? this.tabs[Math.max(0, idx - 1)].path : null;
       }
+      this.registerEditorClose(path);
     },
     async saveTab(path) {
       const tab = this.tabs.find((t) => t.path === path);
@@ -311,8 +337,9 @@ export const useFileManager = defineStore('fileManager', {
     },
 
     // Search ----------------------------------------------------------
-    async runSearch(query) {
+    async runSearch(query, scope = this.search.scope) {
       this.search.query = query;
+      this.search.scope = scope;
       if (!query) {
         this.search.active = false;
         this.search.results = [];
@@ -321,7 +348,7 @@ export const useFileManager = defineStore('fileManager', {
       this.search.running = true;
       this.search.active = true;
       try {
-        const data = await api.search(query, this.currentPath);
+        const data = await api.search(query, this.currentPath, scope);
         this.search.results = data.results;
       } catch (e) {
         this.notify(e.message, 'error');
@@ -330,7 +357,59 @@ export const useFileManager = defineStore('fileManager', {
       }
     },
     clearSearch() {
-      this.search = { query: '', active: false, results: [], running: false };
+      this.search = { query: '', active: false, results: [], running: false, scope: this.search.scope || 'down' };
+    },
+
+    // Recent files (Pro) ----------------------------------------------
+    async loadRecent() {
+      if (!api.boot.isPro) return;
+      try {
+        const data = await api.getRecent();
+        this.recentFiles = data.items || [];
+      } catch (e) {
+        // Non-fatal for Pro hook.
+      }
+    },
+    async trackRecent(path) {
+      if (!api.boot.isPro || !path) return;
+      try {
+        const data = await api.addRecent(path);
+        this.recentFiles = data.items || [];
+      } catch (e) {
+        // Non-fatal.
+      }
+    },
+
+    // Editor open registry (v1.1) -------------------------------------
+    async registerEditorOpen(path) {
+      try {
+        await api.editorOpen(path);
+        await this.refreshEditorPeers(path);
+      } catch (e) {
+        // Non-fatal.
+      }
+    },
+    async registerEditorClose(path) {
+      try {
+        await api.editorClose(path);
+        const next = { ...this.editorPeers };
+        delete next[path];
+        this.editorPeers = next;
+      } catch (e) {
+        // Non-fatal.
+      }
+    },
+    async refreshEditorPeers(path) {
+      if (!path) return;
+      try {
+        const data = await api.editorPeers(path);
+        this.editorPeers = { ...this.editorPeers, [path]: data.peers || [] };
+      } catch (e) {
+        // Non-fatal.
+      }
+    },
+    peersForPath(path) {
+      return this.editorPeers[path] || [];
     },
 
     // Settings --------------------------------------------------------

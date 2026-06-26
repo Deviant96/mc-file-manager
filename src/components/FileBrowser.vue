@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useFileManager } from '../stores/fileManager';
 import { api } from '../api/client';
 import { formatBytes, formatDate, iconFor } from '../utils/format';
+import SkeletonTable from './SkeletonTable.vue';
 
 const store = useFileManager();
 const emit = defineEmits(['activate', 'context', 'rename', 'properties', 'delete']);
@@ -102,7 +103,16 @@ async function onRowDrop(targetEntry, e) {
     @drop="onDrop"
     @contextmenu="onEmptyContext"
   >
-    <table v-if="rows.length" class="mcfm-table">
+    <SkeletonTable v-if="store.listing" />
+
+    <div v-else-if="store.listError" class="mcfm-error-state">
+      <span class="dashicons dashicons-warning" style="font-size:32px;width:32px;height:32px"></span>
+      <div>Could not load folder</div>
+      <div class="msg">{{ store.listError }}</div>
+      <button class="mcfm-btn primary" @click="store.openPath(store.currentPath)">Retry</button>
+    </div>
+
+    <table v-else-if="rows.length" class="mcfm-table">
       <thead>
         <tr>
           <th @click="setSort('name')">Name {{ sortIndicator('name') }}</th>

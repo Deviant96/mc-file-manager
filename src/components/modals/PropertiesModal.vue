@@ -61,6 +61,10 @@ async function rollback(id) {
             <span class="k">Writable</span><span class="v">{{ data.entry.writable ? 'Yes' : 'No' }}</span>
             <span class="k">Preview</span><span class="v">{{ data.preview }}</span>
             <span class="k">Snapshots</span><span class="v">{{ data.snapshots.length }}</span>
+            <template v-if="data.hashes && data.hashes.md5">
+              <span class="k">MD5</span><span class="v" style="font-family:monospace;font-size:11px">{{ data.hashes.md5 }}</span>
+              <span class="k">SHA256</span><span class="v" style="font-family:monospace;font-size:11px">{{ data.hashes.sha256 }}</span>
+            </template>
           </div>
 
           <template v-if="data.snapshots.length">

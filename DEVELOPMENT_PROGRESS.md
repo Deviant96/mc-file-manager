@@ -19,13 +19,13 @@ each block here to the canonical phases in `DEVELOPMENT_PLAN.md` §14.
 | Phase 6 (Editor) | Phase 4 Editor | `[x]` |
 | Phase 7 (Preview, properties, modals) | Phase 5 Preview + Phase 6 Audit/trash | `[x]` |
 | Phase 8 (Settings) | Phase 7 Settings | `[x]` |
-| Phase 9 (Polish) | Phase 8 Polish | `[~]` |
-| Phase 10 (Pro-ready hooks) | Phase 9 Pro-ready hooks | `[ ]` |
-| Phase 11 (Post-v1 ZIP) | Phase 10 Post-v1 advanced ops | `[ ]` |
-| v1.1 (Concurrent-edit warning) | v1.1 | `[ ]` |
+| Phase 9 (Polish) | Phase 8 Polish | `[x]` |
+| Phase 10 (Pro-ready hooks) | Phase 9 Pro-ready hooks | `[x]` |
+| Phase 11 (Post-v1 ZIP) | Phase 10 Post-v1 advanced ops | `[~]` |
+| v1.1 (Concurrent-edit warning) | v1.1 | `[x]` |
 
 **v1 core** (Phases 1–8) is complete. Polish, Pro hooks, post-v1 ops, and v1.1 are
-tracked separately below so completion is not overstated.
+tracked below.
 
 ---
 
@@ -73,7 +73,7 @@ tracked separately below so completion is not overstated.
 - [x] File list + multi-select (ctrl/shift), sortable columns
 - [x] Breadcrumbs
 - [x] Context menu
-- [~] Clipboard (cut/copy/paste) + keyboard shortcuts — Ctrl+C/V/X/S, Delete, F2 done; F5 and Ctrl+F pending (see Phase 9)
+- [x] Clipboard (cut/copy/paste) + keyboard shortcuts — Ctrl+C/V/X/S, Delete, F2, F5, Ctrl+F
 - [x] Drag-and-drop upload + internal move
 
 ## Phase 6 — Editor
@@ -100,36 +100,36 @@ tracked separately below so completion is not overstated.
 
 ## Phase 9 — Polish (plan §14 Phase 8)
 
-- [~] Animations and transitions — basic spinners only
+- [x] Animations and transitions — toast enter/leave, modal fade CSS
 - [x] Empty states — basic messages in tree, browser, search
-- [ ] Loading skeletons for tree and file list
-- [~] Keyboard shortcuts — F2, Delete, Ctrl+C/V/X/S done; **F5 refresh** and **Ctrl+F search** not wired
-- [ ] Responsive panes — tabs/stacked panels on small screens (only minimal `@media` today)
-- [~] Error handling polish — toasts exist; consistent retry/empty-error UX pending
+- [x] Loading skeletons for tree and file list
+- [x] Keyboard shortcuts — F2, Delete, Ctrl+C/V/X/S, F5 refresh, Ctrl+F focus search
+- [x] Responsive panes — mobile tab bar (Explorer | Files | Editor) at ≤768px
+- [x] Error handling polish — list/tree error states with Retry button
 
 ## Phase 10 — Pro-ready hooks (plan §14 Phase 9)
 
-- [ ] Recently opened files — per-user list + backend persistence
-- [ ] Chunk upload abstraction — driver/service split for large files
-- [ ] Advanced search architecture — content search, filters, regex
-- [ ] Search scope option — current folder vs entire site (UI + `scope` API param); **Pro**
-- [ ] Role-based folder visibility — admin mapping UI + `mcfm_authorize_path` integration; **Pro**
+- [x] Recently opened files — per-user list via user meta + REST `/recent`
+- [x] Chunk upload abstraction — `UploadHandlerInterface`, `StandardUploadHandler`, `ChunkUploadHandler` stub, `mcfm_upload_handler` filter
+- [x] Advanced search architecture — `AdvancedSearchService` + `mcfm_advanced_search` filter
+- [x] Search scope option — `scope` param (`down` | `folder` | `site`); Pro-gated for folder/site; toolbar select
+- [x] Role-based folder visibility — `RoleFolderService` + settings JSON (Pro UI in Settings modal)
 
-Existing hooks (no UI yet): `mcfm_authorize_path`, `mcfm_required_capability`, filesystem driver interface.
+Hooks: `mcfm_is_pro`, `mcfm_authorize_path`, `mcfm_required_capability`, `mcfm_upload_handler`, `mcfm_advanced_search`.
 
 ## Phase 11 — Post-v1 advanced file operations (plan §14 Phase 10)
 
-- [ ] ZIP archive create
-- [ ] ZIP extract (unzip)
-- [ ] Bulk operations on multi-select
-- [ ] chmod / permissions change (optional)
-- [ ] File hash (MD5/SHA256) in properties modal
+- [x] ZIP archive create — toolbar + `POST /archive`
+- [x] ZIP extract (unzip) — context menu + `POST /extract`
+- [~] Bulk operations on multi-select — ZIP from selection; dedicated bulk toolbar actions pending
+- [x] chmod / permissions change — `POST /chmod` (API ready; UI in properties modal pending)
+- [x] File hash (MD5/SHA256) in properties modal
 
 ## v1.1 — Concurrent-edit warning (plan §14 v1.1)
 
-- [ ] Detect when another admin session has the same file open (heartbeat or open-registry)
-- [ ] Non-blocking warning banner in editor (no hard lock)
-- [ ] Audit log entry for concurrent-open events
+- [x] Detect when another admin session has the same file open — transient-based `OpenRegistryService`
+- [x] Non-blocking warning banner in editor (no hard lock)
+- [x] Audit log entry for concurrent-open events
 
 ---
 
@@ -171,3 +171,4 @@ See `DEVELOPMENT_PLAN.md` §13. Summary:
 - Build: Vite pipeline configured and producing assets; theme variables fixed to mount element; relative asset base for fonts/workers.
 - PHP 7.4: lowered minimum from 8.2; replaced union catch types in `RestController` with a PHP 7.4-safe helper; updated plugin header and `readme.txt`.
 - Docs: alignment pass — phase mapping table, explicit Polish/Pro/post-v1/v1.1 tracking, search scope and role folders moved to Pro, `GET /raw` documented in plan.
+- Phase 9–11 + v1.1: polish (skeletons, F5/Ctrl+F, responsive tabs, error retry), Pro hooks (recent files, search scope, role folders, upload/search abstractions), ZIP create/extract, file hashes, concurrent-edit warning via open registry.
