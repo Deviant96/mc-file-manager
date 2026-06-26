@@ -18,6 +18,7 @@ function onRowClick(entry, index, e) {
 
 function onRowContext(entry, index, e) {
   e.preventDefault();
+  e.stopPropagation();
   if (!store.isSelected(entry.path)) {
     store.select(entry, index, {});
   }

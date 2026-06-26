@@ -37,6 +37,9 @@ export const useFileManager = defineStore('fileManager', {
     notifications: [],
 
     sort: { key: 'name', dir: 'asc' },
+
+    navStack: [''],
+    navIndex: 0,
   }),
 
   getters: {
@@ -58,6 +61,12 @@ export const useFileManager = defineStore('fileManager', {
         return cmp * factor;
       });
     },
+    canGoBack(state) {
+      return state.navIndex > 0;
+    },
+    canGoForward(state) {
+      return state.navIndex < state.navStack.length - 1;
+    },
   },
 
   actions: {
@@ -73,7 +82,12 @@ export const useFileManager = defineStore('fileManager', {
       this.notifications = this.notifications.filter((n) => n.id !== id);
     },
 
-    async openPath(path) {
+    async openPath(path, { fromNav = false } = {}) {
+      if (!fromNav && path !== this.currentPath) {
+        this.navStack = this.navStack.slice(0, this.navIndex + 1);
+        this.navStack.push(path);
+        this.navIndex = this.navStack.length - 1;
+      }
       this.listing = true;
       this.listError = null;
       try {
@@ -97,8 +111,20 @@ export const useFileManager = defineStore('fileManager', {
       if (this.search.active) {
         await this.runSearch(this.search.query);
       } else {
-        await this.openPath(this.currentPath);
+        await this.openPath(this.currentPath, { fromNav: true });
       }
+    },
+
+    goBack() {
+      if (!this.canGoBack) return;
+      this.navIndex -= 1;
+      return this.openPath(this.navStack[this.navIndex], { fromNav: true });
+    },
+
+    goForward() {
+      if (!this.canGoForward) return;
+      this.navIndex += 1;
+      return this.openPath(this.navStack[this.navIndex], { fromNav: true });
     },
 
     async loadTreeRoot() {

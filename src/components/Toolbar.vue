@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useFileManager } from '../stores/fileManager';
 import { api } from '../api/client';
 
@@ -11,6 +11,8 @@ const searchInput = ref(null);
 const showRecent = ref(false);
 const fileInput = ref(null);
 let searchTimer = null;
+
+const SEARCH_DEBOUNCE_MS = 450;
 
 const isPro = computed(() => !!api.boot.isPro);
 
@@ -26,15 +28,22 @@ function onSearchInput() {
     if (searchTerm.value.trim()) {
       store.runSearch(searchTerm.value.trim(), store.search.scope);
     } else {
-      store.clearSearch();
-      store.openPath(store.currentPath);
+      clearSearchInput();
     }
-  }, 300);
+  }, SEARCH_DEBOUNCE_MS);
+}
+
+function clearSearchInput() {
+  searchTerm.value = '';
+  clearTimeout(searchTimer);
+  store.clearSearch();
+  store.openPath(store.currentPath, { fromNav: true });
 }
 
 function onScopeChange(e) {
   const scope = e.target.value;
   if ((scope === 'folder' || scope === 'site') && !isPro.value) {
+    e.target.value = store.search.scope;
     store.notify('Search scope options require MC File Manager Pro.', 'warning');
     return;
   }
@@ -75,11 +84,34 @@ async function openRecent(item) {
   await store.openFile(entry);
 }
 
+onMounted(() => {
+  if (!isPro.value && (store.search.scope === 'folder' || store.search.scope === 'site')) {
+    store.search.scope = 'down';
+  }
+});
+
 defineExpose({ focusSearch });
 </script>
 
 <template>
   <div class="mcfm-toolbar">
+    <button
+      class="mcfm-btn"
+      :disabled="!store.canGoBack"
+      title="Back (Alt+Left)"
+      @click="store.goBack()"
+    >
+      <span class="dashicons dashicons-arrow-left-alt2"></span>
+    </button>
+    <button
+      class="mcfm-btn"
+      :disabled="!store.canGoForward"
+      title="Forward (Alt+Right)"
+      @click="store.goForward()"
+    >
+      <span class="dashicons dashicons-arrow-right-alt2"></span>
+    </button>
+
     <button class="mcfm-btn" @click="emit('new-file')" title="New file">
       <span class="dashicons dashicons-media-default"></span> New File
     </button>
@@ -140,14 +172,27 @@ defineExpose({ focusSearch });
         placeholder="Search filenames… (Ctrl+F)"
         @input="onSearchInput"
       />
+      <button
+        v-if="searchTerm"
+        type="button"
+        class="mcfm-search-clear"
+        title="Clear search"
+        @click="clearSearchInput"
+      >
+        <span class="dashicons dashicons-no-alt"></span>
+      </button>
       <select
-        class="mcfm-select"
-        style="width:auto;border:none;background:transparent;font-size:11px;padding:0 4px"
+        class="mcfm-select mcfm-search-scope"
         :value="store.search.scope"
         title="Search scope"
         @change="onScopeChange"
       >
-        <option v-for="opt in searchScopes" :key="opt.value" :value="opt.value">
+        <option
+          v-for="opt in searchScopes"
+          :key="opt.value"
+          :value="opt.value"
+          :disabled="opt.pro && !isPro"
+        >
           {{ opt.label }}{{ opt.pro && !isPro ? ' (Pro)' : '' }}
         </option>
       </select>

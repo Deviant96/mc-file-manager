@@ -6,7 +6,7 @@ const props = defineProps({
   node: { type: Object, required: true },
   depth: { type: Number, default: 0 },
 });
-const emit = defineEmits(['navigate']);
+const emit = defineEmits(['navigate', 'context']);
 const store = useFileManager();
 
 const isActive = computed(() => store.currentPath === props.node.path && !store.search.active);
@@ -25,6 +25,16 @@ async function activate() {
     await toggle();
   }
 }
+
+function onContext(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  emit('context', {
+    x: e.clientX,
+    y: e.clientY,
+    entry: { path: props.node.path, name: props.node.name, isDir: true },
+  });
+}
 </script>
 
 <template>
@@ -34,6 +44,7 @@ async function activate() {
       :class="{ active: isActive }"
       :style="{ paddingLeft: 8 + depth * 12 + 'px' }"
       @click="activate"
+      @contextmenu="onContext"
     >
       <span class="mcfm-tree-twisty" @click.stop="toggle">
         <span v-if="canExpand" class="dashicons" :class="node.expanded ? 'dashicons-arrow-down-alt2' : 'dashicons-arrow-right-alt2'"></span>
@@ -49,6 +60,7 @@ async function activate() {
         :node="child"
         :depth="depth + 1"
         @navigate="$emit('navigate', $event)"
+        @context="$emit('context', $event)"
       />
     </div>
   </div>

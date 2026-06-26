@@ -52,6 +52,15 @@ function askConfirm(opts) {
 // Context menu --------------------------------------------------------
 const contextMenu = reactive({ visible: false, x: 0, y: 0, entry: null });
 function openContext({ x, y, entry }) {
+  if (entry) {
+    if (!store.isSelected(entry.path)) {
+      store.selection = [entry.path];
+      const idx = store.entries.findIndex((e) => e.path === entry.path);
+      store.lastSelectedIndex = idx >= 0 ? idx : -1;
+    }
+  } else {
+    store.clearSelection();
+  }
   contextMenu.x = x;
   contextMenu.y = y;
   contextMenu.entry = entry;
@@ -243,6 +252,12 @@ function onKeydown(e) {
   } else if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
     e.preventDefault();
     toolbarRef.value?.focusSearch();
+  } else if (e.altKey && e.key === 'ArrowLeft') {
+    e.preventDefault();
+    store.goBack();
+  } else if (e.altKey && e.key === 'ArrowRight') {
+    e.preventDefault();
+    store.goForward();
   }
 }
 
@@ -292,7 +307,11 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="mcfm-body" :class="{ 'mcfm-mobile': isMobile }">
-        <TreePane :class="{ 'mcfm-pane-active': !isMobile || mobilePane === 'tree' }" @navigate="store.openPath($event)" />
+        <TreePane
+          :class="{ 'mcfm-pane-active': !isMobile || mobilePane === 'tree' }"
+          @navigate="store.openPath($event)"
+          @context="openContext"
+        />
 
         <div class="mcfm-center" :class="{ 'mcfm-pane-active': !isMobile || mobilePane === 'files' }">
           <Breadcrumbs @navigate="store.openPath($event)" />

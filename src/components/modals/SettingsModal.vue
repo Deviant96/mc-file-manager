@@ -70,7 +70,7 @@ async function save() {
           <label>UI theme</label>
           <select v-model="form.theme" class="mcfm-select">
             <option value="vscode">VS Code (dark)</option>
-            <option value="wordpress">WordPress (light)</option>
+            <option value="wordpress">VS Code (light)</option>
           </select>
         </div>
         <hr style="border-color:var(--mcfm-border);margin:16px 0" />

@@ -172,3 +172,4 @@ See `DEVELOPMENT_PLAN.md` §13. Summary:
 - PHP 7.4: lowered minimum from 8.2; replaced union catch types in `RestController` with a PHP 7.4-safe helper; updated plugin header and `readme.txt`.
 - Docs: alignment pass — phase mapping table, explicit Polish/Pro/post-v1/v1.1 tracking, search scope and role folders moved to Pro, `GET /raw` documented in plan.
 - Phase 9–11 + v1.1: polish (skeletons, F5/Ctrl+F, responsive tabs, error retry), Pro hooks (recent files, search scope, role folders, upload/search abstractions), ZIP create/extract, file hashes, concurrent-edit warning via open registry.
+- FOUND_BUGS pass: context menu fix (row stopPropagation + tree), VS Code (light) theme label, search scope dark-theme colors, search clear button + debounce, disabled Pro scopes, back/forward navigation history.

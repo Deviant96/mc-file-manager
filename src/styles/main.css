@@ -1,7 +1,8 @@
-/* MC File Manager SPA styles. VS Code-inspired by default, with a WordPress
-   theme variant toggled via the data-theme attribute on the app root. */
+/* MC File Manager SPA styles. VS Code-inspired by default, with a VS Code
+   light theme variant toggled via the data-theme attribute on the app root. */
 
 #mcfm-app {
+  color-scheme: dark;
   --mcfm-bg: #1e1e1e;
   --mcfm-bg-alt: #252526;
   --mcfm-bg-elevated: #2d2d30;
@@ -38,6 +39,7 @@ body.folded #mcfm-app { left: 36px; }
 @media (max-width: 960px) { #mcfm-app { left: 0; } }
 
 #mcfm-app[data-theme="wordpress"] {
+  color-scheme: light;
   --mcfm-bg: #f0f0f1;
   --mcfm-bg-alt: #ffffff;
   --mcfm-bg-elevated: #ffffff;
@@ -108,6 +110,33 @@ body.folded #mcfm-app { left: 36px; }
   width: 200px;
   font-size: 12px;
 }
+.mcfm-search-scope {
+  width: auto;
+  border: none;
+  background: transparent;
+  font-size: 11px;
+  padding: 0 4px;
+  color: var(--mcfm-text);
+  cursor: pointer;
+}
+.mcfm-search-scope:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.mcfm-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0 2px;
+  color: var(--mcfm-text-dim);
+  cursor: pointer;
+  line-height: 1;
+}
+.mcfm-search-clear:hover { color: var(--mcfm-text); }
+.mcfm-search-clear .dashicons { font-size: 14px; width: 14px; height: 14px; }
 
 /* Body / panes ------------------------------------------------------- */
 .mcfm-body { flex: 1; display: flex; min-height: 0; }

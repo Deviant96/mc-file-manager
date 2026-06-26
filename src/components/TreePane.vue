@@ -4,7 +4,7 @@ import TreeNode from './TreeNode.vue';
 import SkeletonTree from './SkeletonTree.vue';
 
 const store = useFileManager();
-defineEmits(['navigate']);
+defineEmits(['navigate', 'context']);
 </script>
 
 <template>
@@ -16,6 +16,12 @@ defineEmits(['navigate']);
       <div class="msg">{{ store.treeError }}</div>
       <button class="mcfm-btn" @click="store.loadTreeRoot()">Retry</button>
     </div>
-    <TreeNode v-else :node="store.treeRoot" :depth="0" @navigate="$emit('navigate', $event)" />
+    <TreeNode
+      v-else
+      :node="store.treeRoot"
+      :depth="0"
+      @navigate="$emit('navigate', $event)"
+      @context="$emit('context', $event)"
+    />
   </div>
 </template>
