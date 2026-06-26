@@ -1,16 +1,16 @@
 # Found bugs & feature requests
 
-All items below were addressed in the latest development pass.
+All items below were addressed in this development pass.
 
-## Bugs (fixed)
+## Bugs
 
-- [x] Can't right click on file or folder — row `contextmenu` now stops propagation; tree nodes emit context menu events
-- [x] "WordPress (light)" renamed to **VS Code (light)** in settings (internal key unchanged for saved settings)
-- [x] Search scope select text invisible on dark theme — `color` + `color-scheme` on app root and scoped select styles
+- (none in this batch)
 
 ## Features (implemented)
 
-- [x] X icon to clear search text
-- [x] Search input debounce (450 ms) to reduce request spam while typing
-- [x] Pro search scopes (`folder`, `site`) disabled when not on Pro
-- [x] Back / Forward toolbar buttons with navigation history (Alt+Left / Alt+Right)
+- [x] Activity logs show username (`display_name` column in Activity Log modal)
+- [x] Individual snapshots can be deleted from Properties → Revision snapshots
+- [x] Right-click Download zips multiple selected items or folders (`GET /download-zip`)
+- [x] Single-folder download via ZIP (context menu: "Download as ZIP")
+- [x] Rubber-band multi-select — drag in the file list to select multiple rows
+- [x] File list shows snapshot status under each file name (`Snapshot: Yes | Last Snapshot: …`)
