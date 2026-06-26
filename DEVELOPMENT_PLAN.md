@@ -7,7 +7,7 @@ Build a WordPress admin file manager plugin that can safely browse, edit, and ma
 ## Locked requirements
 
 * WordPress 6.6+
-* PHP 7.4+
+* PHP 7.4+ (authoritative minimum; supersedes the planning-session suggestion of PHP 8.2+)
 * Admin only for v1
 * Full WordPress install access
 * Root jail to WordPress site directory only
@@ -36,9 +36,10 @@ Build a WordPress admin file manager plugin that can safely browse, edit, and ma
 * Recently opened files as Pro
 * Chunk uploads as Pro
 * Advanced search as Pro
+* Search scope option (current folder vs entire site) as Pro
+* Role-based folder visibility as Pro
 * Max editable file size default 100 MB
 * Path traversal protection
-* Role-based folder visibility planned
 * Custom tables allowed, with option to remove them on uninstall
 * Generic branding:
 
@@ -257,9 +258,17 @@ Support:
 
 ## Search
 
-V1 search should be filename-only and search the current root scope.
+V1 search should be filename-only. The Free build searches recursively from the
+user's current path (at site root this covers the full install; there is no scope
+toggle in v1).
 
-Later Pro:
+Pro adds a search scope option:
+
+* current folder only
+* from current path downward (default Free behavior)
+* entire site (always from `ABSPATH`)
+
+Pro also adds:
 
 * advanced search
 * content search
@@ -359,7 +368,8 @@ For v1:
 
 * admin only
 
-Design the permission layer so future role-based folder restrictions can be added later.
+Design the permission layer so Pro role-based folder restrictions can be added later
+via the `mcfm_authorize_path` filter without reworking REST or UI call sites.
 
 ## File editing policy
 
@@ -506,6 +516,8 @@ Suggested endpoints:
 
 * `POST /upload`
 * `GET /download?path=...`
+* `GET /raw?path=...` — inline file stream for image preview (same path jail as
+  `/download`; served without `Content-Disposition: attachment`)
 
 ## Metadata
 
@@ -617,10 +629,14 @@ Do not rely on deprecated jQuery-era plugins unless there is a strong reason.
 
 ## PHP compatibility (7.4+)
 
-Target PHP 7.4 as the minimum runtime. Safe to use typed properties, arrow functions,
-nullable types, and `void` return types. Avoid PHP 8-only syntax such as union types in
-`catch` clauses, constructor property promotion, attributes, enums, and `match` expressions.
-Prefer `strpos()` over `str_contains()` / `str_starts_with()` for string checks.
+**PHP 7.4 is the authoritative minimum runtime** for this plugin. An early planning
+session suggested PHP 8.2+; that recommendation is superseded — the codebase and plugin
+header target 7.4+ for broader host compatibility.
+
+Safe to use typed properties, arrow functions, nullable types, and `void` return types.
+Avoid PHP 8-only syntax such as union types in `catch` clauses, constructor property
+promotion, attributes, enums, and `match` expressions. Prefer `strpos()` over
+`str_contains()` / `str_starts_with()` for string checks.
 
 ---
 
@@ -656,14 +672,35 @@ Prefer `strpos()` over `str_contains()` / `str_starts_with()` for string checks.
 ## Pro reserved
 
 * chunk uploads
-* advanced search
+* search scope option (current folder vs entire site)
+* advanced search (content, filters, regex)
 * recently opened files
+* role-based folder visibility per user/role
 
 Keep the codebase ready for these features, but do not build them into v1.
 
 ---
 
-# 13. Recommended implementation phases
+# 13. Out of v1 scope
+
+Items discussed during planning but explicitly deferred beyond the first release:
+
+| Item | Source | Target |
+|------|--------|--------|
+| Advanced file operations (ZIP, unzip, bulk ops, chmod, owner/group, file hash) | CP1 | Post-v1 — see Phase 10 below |
+| Search scope toggle (current folder vs entire site) | CP2 | Pro — see §12 |
+| Folder upload via drag-drop | CP1 | Post-v1 polish or Pro |
+| Multi-select drag | CP1 | Post-v1 polish |
+| Concurrent-edit warning when two admins open the same file | CP3 | v1.1 — see below |
+| Role-based folder visibility per role | CP1, CP5 | Pro — see §12 |
+| SFTP, S3, Git, diff viewer, malware scan, terminal | CP3 | Not planned |
+
+The Free v1 build still delivers filename search (recursive from the current path) and
+full admin access to the entire WordPress install.
+
+---
+
+# 14. Recommended implementation phases
 
 ## Phase 1: Foundation
 
@@ -733,22 +770,40 @@ Keep the codebase ready for these features, but do not build them into v1.
 
 ## Phase 8: Polish
 
-* animations
-* empty states
-* loading skeletons
-* keyboard shortcuts
-* responsive behavior
-* error handling
+* animations and transitions
+* empty states (partial — basic messages exist)
+* loading skeletons for tree and file list
+* keyboard shortcuts — F2, Delete, Ctrl+C/V/X/S (done); F5 refresh, Ctrl+F search (pending)
+* responsive behavior — collapse panes into tabs/stacked panels on small screens
+* error handling polish
 
 ## Phase 9: Pro-ready hooks
 
 * recently opened files hook
 * chunk upload abstraction
 * advanced search architecture
+* search scope setting and API parameter
+* role-based folder visibility (`mcfm_authorize_path` admin UI + mapping table)
+
+## Phase 10: Post-v1 — advanced file operations
+
+* ZIP archive create
+* ZIP extract (unzip)
+* bulk operations on multi-select
+* chmod / permissions change (optional)
+* file hash (MD5/SHA256) in properties modal
+
+Start with ZIP create/extract; add remaining items incrementally.
+
+## v1.1: Concurrent-edit warning
+
+When Admin B opens a file that Admin A already has open in an editor tab, show a
+non-blocking warning (no hard lock). Log the event in the audit trail. Simpler than
+file locking and sufficient for internal admin use.
 
 ---
 
-# 14. Key library choices
+# 15. Key library choices
 
 Recommended stack:
 
@@ -764,7 +819,7 @@ Recommended stack:
 
 ---
 
-# 15. Non-negotiable safety rules
+# 16. Non-negotiable safety rules
 
 * Never trust client paths
 * Never allow root escape
@@ -777,7 +832,7 @@ Recommended stack:
 
 ---
 
-# 16. Final product shape
+# 17. Final product shape
 
 The first release should feel like this:
 

@@ -6,6 +6,29 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ---
 
+## Phase mapping (this document ↔ plan §14)
+
+Progress is tracked in **implementation order** (backend first). The table below maps
+each block here to the canonical phases in `DEVELOPMENT_PLAN.md` §14.
+
+| Progress section | Plan §14 phase | Status |
+|------------------|----------------|--------|
+| Phases 1–3 (Foundation, Services, REST) | Phase 1 Foundation + core backend | `[x]` |
+| Phase 4 (Frontend shell) | Phase 2 Browser UI (shell) | `[x]` |
+| Phase 5 (Browser UI) | Phase 2 Browser UI (components) | `[x]` |
+| Phase 6 (Editor) | Phase 4 Editor | `[x]` |
+| Phase 7 (Preview, properties, modals) | Phase 5 Preview + Phase 6 Audit/trash | `[x]` |
+| Phase 8 (Settings) | Phase 7 Settings | `[x]` |
+| Phase 9 (Polish) | Phase 8 Polish | `[~]` |
+| Phase 10 (Pro-ready hooks) | Phase 9 Pro-ready hooks | `[ ]` |
+| Phase 11 (Post-v1 ZIP) | Phase 10 Post-v1 advanced ops | `[ ]` |
+| v1.1 (Concurrent-edit warning) | v1.1 | `[ ]` |
+
+**v1 core** (Phases 1–8) is complete. Polish, Pro hooks, post-v1 ops, and v1.1 are
+tracked separately below so completion is not overstated.
+
+---
+
 ## Phase 1 — Foundation (backend core)
 
 - [x] Plugin bootstrap (`mc-file-manager.php`, `MCFM\Plugin`, PSR-4 autoloader)
@@ -30,8 +53,8 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] Tree / children / breadcrumbs
 - [x] list / folder / file / rename / move / copy / delete / restore
 - [x] file (read) / save / snapshot / snapshot restore
-- [x] search (filename, recursive, capped)
-- [x] upload / download / raw (inline)
+- [x] search (filename, recursive from current path, capped)
+- [x] upload / download / raw (inline preview)
 - [x] properties
 - [x] logs / trash / purge
 - [x] settings (get/post)
@@ -50,7 +73,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] File list + multi-select (ctrl/shift), sortable columns
 - [x] Breadcrumbs
 - [x] Context menu
-- [x] Clipboard (cut/copy/paste) + keyboard shortcuts
+- [~] Clipboard (cut/copy/paste) + keyboard shortcuts — Ctrl+C/V/X/S, Delete, F2 done; F5 and Ctrl+F pending (see Phase 9)
 - [x] Drag-and-drop upload + internal move
 
 ## Phase 6 — Editor
@@ -62,7 +85,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Phase 7 — Preview, properties, modals
 
-- [x] Image preview (inline raw endpoint)
+- [x] Image preview (inline `GET /raw` endpoint)
 - [x] Text preview (editor)
 - [x] Properties modal (with snapshot rollback)
 - [x] Settings modal
@@ -72,6 +95,43 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ## Phase 8 — Settings + uninstall behavior
 
 - [x] Warning toggle, size limit, snapshot retention, trash toggle, theme, uninstall cleanup options
+
+---
+
+## Phase 9 — Polish (plan §14 Phase 8)
+
+- [~] Animations and transitions — basic spinners only
+- [x] Empty states — basic messages in tree, browser, search
+- [ ] Loading skeletons for tree and file list
+- [~] Keyboard shortcuts — F2, Delete, Ctrl+C/V/X/S done; **F5 refresh** and **Ctrl+F search** not wired
+- [ ] Responsive panes — tabs/stacked panels on small screens (only minimal `@media` today)
+- [~] Error handling polish — toasts exist; consistent retry/empty-error UX pending
+
+## Phase 10 — Pro-ready hooks (plan §14 Phase 9)
+
+- [ ] Recently opened files — per-user list + backend persistence
+- [ ] Chunk upload abstraction — driver/service split for large files
+- [ ] Advanced search architecture — content search, filters, regex
+- [ ] Search scope option — current folder vs entire site (UI + `scope` API param); **Pro**
+- [ ] Role-based folder visibility — admin mapping UI + `mcfm_authorize_path` integration; **Pro**
+
+Existing hooks (no UI yet): `mcfm_authorize_path`, `mcfm_required_capability`, filesystem driver interface.
+
+## Phase 11 — Post-v1 advanced file operations (plan §14 Phase 10)
+
+- [ ] ZIP archive create
+- [ ] ZIP extract (unzip)
+- [ ] Bulk operations on multi-select
+- [ ] chmod / permissions change (optional)
+- [ ] File hash (MD5/SHA256) in properties modal
+
+## v1.1 — Concurrent-edit warning (plan §14 v1.1)
+
+- [ ] Detect when another admin session has the same file open (heartbeat or open-registry)
+- [ ] Non-blocking warning banner in editor (no hard lock)
+- [ ] Audit log entry for concurrent-open events
+
+---
 
 ## Build status
 
@@ -84,7 +144,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] All PHP files pass `php -l`
 - [x] Vite build succeeds with no errors
 - [x] Path resolver security harness: traversal, encoded, null-byte, and symlink escapes all blocked; leading-slash paths stay jailed
-- [x] PHP 7.4 compatibility: union catch types replaced; minimum requirement lowered from 8.2 to 7.4
+- [x] PHP 7.4 compatibility: union catch types replaced; minimum requirement lowered from 8.2 to 7.4 (authoritative; supersedes CP2 planning answer)
 
 ---
 
@@ -94,11 +154,14 @@ The plugin lives at the WordPress plugins path (e.g. `wp-content/plugins/mc-file
 Activate it in wp-admin → Plugins, then open the "File Manager" menu item.
 Compiled assets are already in `assets/build/`. To rebuild: `npm install && npm run build`.
 
-## Notes / future (Pro-reserved, not built)
+## Deferred / out of v1 scope
 
-- Chunked uploads, advanced/content search, recently-opened files: backend hooks
-  (`mcfm_authorize_path`, `mcfm_required_capability`) and a driver interface are in
-  place so these can be added without reworking the UI or editor lifecycle.
+See `DEVELOPMENT_PLAN.md` §13. Summary:
+
+- **Pro:** search scope toggle, advanced/content search, chunk uploads, recently opened files, role-based folder visibility
+- **Post-v1:** ZIP/unzip, bulk ops, chmod, file hash
+- **v1.1:** concurrent-edit warning
+- **Not planned:** SFTP, S3, Git, terminal, malware scan
 
 ## Changelog
 
@@ -107,3 +170,4 @@ Compiled assets are already in `assets/build/`. To rebuild: `npm install && npm 
 - Frontend: Vue 3 SPA (toolbar, tree, browser, breadcrumbs, editor, preview, status bar, context menu, toasts, modals), Pinia store, nonce-aware API client, Monaco editor.
 - Build: Vite pipeline configured and producing assets; theme variables fixed to mount element; relative asset base for fonts/workers.
 - PHP 7.4: lowered minimum from 8.2; replaced union catch types in `RestController` with a PHP 7.4-safe helper; updated plugin header and `readme.txt`.
+- Docs: alignment pass — phase mapping table, explicit Polish/Pro/post-v1/v1.1 tracking, search scope and role folders moved to Pro, `GET /raw` documented in plan.
