@@ -110,6 +110,18 @@ class RestController {
 		return new WP_Error( $code, $message, array( 'status' => $status ) );
 	}
 
+	/**
+	 * Re-throw when the caught exception is not a path or filesystem error.
+	 * PHP 7.4 does not support union types in catch clauses.
+	 *
+	 * @param \Exception $e
+	 */
+	private function rethrow_unless_path_fs( \Exception $e ): void {
+		if ( ! ( $e instanceof PathException || $e instanceof FilesystemException ) ) {
+			throw $e;
+		}
+	}
+
 	private function param_path( WP_REST_Request $request, string $key = 'path' ): string {
 		return (string) $request->get_param( $key );
 	}
@@ -140,7 +152,8 @@ class RestController {
 				return $this->fail( 'mcfm_not_dir', __( 'Not a directory.', 'mc-file-manager' ) );
 			}
 			return $this->ok( array( 'children' => $this->fs->list_directories( $abs ) ) );
-		} catch ( PathException | FilesystemException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			return $this->fail( 'mcfm_children', $e->getMessage() );
 		}
 	}
@@ -176,7 +189,8 @@ class RestController {
 					'entries' => $this->fs->list_entries( $abs ),
 				)
 			);
-		} catch ( PathException | FilesystemException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			return $this->fail( 'mcfm_list', $e->getMessage() );
 		}
 	}
@@ -213,7 +227,8 @@ class RestController {
 			$rel = $this->fs->resolver()->to_relative( $abs );
 			$this->audit->log( $is_dir ? 'create folder' : 'create file', 'ok', $rel );
 			return $this->ok( array( 'entry' => $this->fs->entry( $abs ) ), 201 );
-		} catch ( PathException | FilesystemException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			$this->audit->log( $is_dir ? 'create folder' : 'create file', 'error', $name, '', $e->getMessage() );
 			return $this->fail( 'mcfm_create', $e->getMessage() );
 		}
@@ -234,7 +249,8 @@ class RestController {
 			$this->fs->driver()->rename( $abs, $to_abs );
 			$this->audit->log( 'rename', 'ok', $this->fs->resolver()->to_relative( $to_abs ), $this->fs->resolver()->to_relative( $abs ) );
 			return $this->ok( array( 'entry' => $this->fs->entry( $to_abs ) ) );
-		} catch ( PathException | FilesystemException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			$this->audit->log( 'rename', 'error', $path, '', $e->getMessage() );
 			return $this->fail( 'mcfm_rename', $e->getMessage() );
 		}
@@ -269,7 +285,8 @@ class RestController {
 
 			$this->audit->log( $op, 'ok', $this->fs->resolver()->to_relative( $dest_abs ), $this->fs->resolver()->to_relative( $src_abs ) );
 			return $this->ok( array( 'entry' => $this->fs->entry( $dest_abs ) ) );
-		} catch ( PathException | FilesystemException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			$this->audit->log( $op, 'error', $dest, $source, $e->getMessage() );
 			return $this->fail( 'mcfm_' . $op, $e->getMessage() );
 		}
@@ -299,7 +316,8 @@ class RestController {
 					$results[] = array( 'path' => $rel, 'trashed' => false );
 				}
 				$this->audit->log( 'delete', 'ok', $rel );
-			} catch ( PathException | FilesystemException $e ) {
+			} catch ( \Exception $e ) {
+				$this->rethrow_unless_path_fs( $e );
 				$errors[] = array( 'path' => (string) $path, 'message' => $e->getMessage() );
 				$this->audit->log( 'delete', 'error', (string) $path, '', $e->getMessage() );
 			}
@@ -314,7 +332,8 @@ class RestController {
 			$restored = $this->trash->restore( $id );
 			$this->audit->log( 'restore', 'ok', $restored );
 			return $this->ok( array( 'restored' => $restored ) );
-		} catch ( FilesystemException | PathException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			$this->audit->log( 'restore', 'error', (string) $id, '', $e->getMessage() );
 			return $this->fail( 'mcfm_restore', $e->getMessage() );
 		}
@@ -351,7 +370,8 @@ class RestController {
 
 			$this->audit->log( 'open', 'ok', $entry['path'] );
 			return $this->ok( $payload );
-		} catch ( PathException | FilesystemException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			return $this->fail( 'mcfm_read', $e->getMessage() );
 		}
 	}
@@ -382,7 +402,8 @@ class RestController {
 					'snapshotId' => $snapshot_id,
 				)
 			);
-		} catch ( PathException | FilesystemException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			$this->audit->log( 'save', 'error', $path, '', $e->getMessage() );
 			return $this->fail( 'mcfm_save', $e->getMessage() );
 		}
@@ -393,7 +414,8 @@ class RestController {
 			$abs = $this->security->authorize_path( $this->param_path( $request ) );
 			$id  = $this->revision->snapshot( $abs );
 			return $this->ok( array( 'snapshotId' => $id ) );
-		} catch ( PathException | FilesystemException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			return $this->fail( 'mcfm_snapshot', $e->getMessage() );
 		}
 	}
@@ -427,7 +449,8 @@ class RestController {
 			$rel = $this->fs->resolver()->to_relative( $abs );
 			$this->audit->log( 'restore', 'ok', $rel, '', 'snapshot rollback #' . $id );
 			return $this->ok( array( 'entry' => $this->fs->entry( $abs ), 'content' => $content ) );
-		} catch ( FilesystemException | PathException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			return $this->fail( 'mcfm_snapshot_restore', $e->getMessage() );
 		}
 	}
@@ -448,7 +471,8 @@ class RestController {
 			$this->search_walk( $base, strtolower( $query ), $results, 0 );
 			$this->audit->log( 'search', 'ok', $this->fs->resolver()->to_relative( $base ), '', $query );
 			return $this->ok( array( 'results' => array_slice( $results, 0, 500 ) ) );
-		} catch ( PathException | FilesystemException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			return $this->fail( 'mcfm_search', $e->getMessage() );
 		}
 	}
@@ -510,7 +534,8 @@ class RestController {
 			$rel = $this->fs->resolver()->to_relative( $abs );
 			$this->audit->log( 'upload', 'ok', $rel );
 			return $this->ok( array( 'entry' => $this->fs->entry( $abs ) ), 201 );
-		} catch ( PathException | FilesystemException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			$this->audit->log( 'upload', 'error', $name, '', $e->getMessage() );
 			return $this->fail( 'mcfm_upload', $e->getMessage() );
 		}
@@ -544,7 +569,8 @@ class RestController {
 			}
 			readfile( $abs ); // phpcs:ignore
 			exit;
-		} catch ( PathException | FilesystemException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			return $this->fail( 'mcfm_download', $e->getMessage() );
 		}
 	}
@@ -566,7 +592,8 @@ class RestController {
 					'hasSnapshots' => ! empty( $snaps ),
 				)
 			);
-		} catch ( PathException | FilesystemException $e ) {
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
 			return $this->fail( 'mcfm_properties', $e->getMessage() );
 		}
 	}

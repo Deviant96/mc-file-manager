@@ -7,7 +7,7 @@ Build a WordPress admin file manager plugin that can safely browse, edit, and ma
 ## Locked requirements
 
 * WordPress 6.6+
-* PHP 8.2+
+* PHP 7.4+
 * Admin only for v1
 * Full WordPress install access
 * Root jail to WordPress site directory only
@@ -614,6 +614,13 @@ Ship compiled assets in the plugin package.
 
 Keep dependencies minimal and current.
 Do not rely on deprecated jQuery-era plugins unless there is a strong reason.
+
+## PHP compatibility (7.4+)
+
+Target PHP 7.4 as the minimum runtime. Safe to use typed properties, arrow functions,
+nullable types, and `void` return types. Avoid PHP 8-only syntax such as union types in
+`catch` clauses, constructor property promotion, attributes, enums, and `match` expressions.
+Prefer `strpos()` over `str_contains()` / `str_starts_with()` for string checks.
 
 ---
 

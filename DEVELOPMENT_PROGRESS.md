@@ -84,6 +84,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] All PHP files pass `php -l`
 - [x] Vite build succeeds with no errors
 - [x] Path resolver security harness: traversal, encoded, null-byte, and symlink escapes all blocked; leading-slash paths stay jailed
+- [x] PHP 7.4 compatibility: union catch types replaced; minimum requirement lowered from 8.2 to 7.4
 
 ---
 
@@ -105,3 +106,4 @@ Compiled assets are already in `assets/build/`. To rebuild: `npm install && npm 
 - Backend: bootstrap, autoloader, DB tables, security/path resolver, filesystem driver + service, repositories, audit/trash/revision/preview/settings services, full REST API, activator/uninstall.
 - Frontend: Vue 3 SPA (toolbar, tree, browser, breadcrumbs, editor, preview, status bar, context menu, toasts, modals), Pinia store, nonce-aware API client, Monaco editor.
 - Build: Vite pipeline configured and producing assets; theme variables fixed to mount element; relative asset base for fonts/workers.
+- PHP 7.4: lowered minimum from 8.2; replaced union catch types in `RestController` with a PHP 7.4-safe helper; updated plugin header and `readme.txt`.

@@ -5,7 +5,7 @@
  * Description:       A safe, VS Code-style file manager for the entire WordPress installation. Browse, edit, snapshot, and recover files from a single admin SPA.
  * Version:           1.0.0
  * Requires at least: 6.6
- * Requires PHP:      8.2
+ * Requires PHP:      7.4
  * Author:            MC
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
