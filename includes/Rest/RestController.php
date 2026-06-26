@@ -111,13 +111,17 @@ class RestController {
 		register_rest_route( $ns, '/save', array( 'methods' => $post, 'callback' => array( $this, 'save_file' ), 'permission_callback' => $perm ) );
 		register_rest_route( $ns, '/snapshots', array( 'methods' => $get, 'callback' => array( $this, 'list_snapshots' ), 'permission_callback' => $perm ) );
 		register_rest_route( $ns, '/snapshot', array( 'methods' => $post, 'callback' => array( $this, 'create_snapshot' ), 'permission_callback' => $perm ) );
-		register_rest_route( $ns, '/snapshot/(?P<id>\d+)', array( 'methods' => $get, 'callback' => array( $this, 'read_snapshot' ), 'permission_callback' => $perm ) );
+		register_rest_route( $ns, '/snapshot/(?P<id>\d+)', array(
+			array( 'methods' => $get, 'callback' => array( $this, 'read_snapshot' ), 'permission_callback' => $perm ),
+			array( 'methods' => WP_REST_Server::DELETABLE, 'callback' => array( $this, 'delete_snapshot' ), 'permission_callback' => $perm ),
+		) );
 		register_rest_route( $ns, '/snapshot/restore', array( 'methods' => $post, 'callback' => array( $this, 'restore_snapshot' ), 'permission_callback' => $perm ) );
 
 		register_rest_route( $ns, '/search', array( 'methods' => $get, 'callback' => array( $this, 'search' ), 'permission_callback' => $perm ) );
 
 		register_rest_route( $ns, '/upload', array( 'methods' => $post, 'callback' => array( $this, 'upload' ), 'permission_callback' => $perm ) );
 		register_rest_route( $ns, '/download', array( 'methods' => $get, 'callback' => array( $this, 'download' ), 'permission_callback' => $perm ) );
+		register_rest_route( $ns, '/download-zip', array( 'methods' => $get, 'callback' => array( $this, 'download_zip' ), 'permission_callback' => $perm ) );
 		register_rest_route( $ns, '/raw', array( 'methods' => $get, 'callback' => array( $this, 'raw' ), 'permission_callback' => $perm ) );
 
 		register_rest_route( $ns, '/properties', array( 'methods' => $get, 'callback' => array( $this, 'properties' ), 'permission_callback' => $perm ) );
@@ -231,10 +235,12 @@ class RestController {
 				return $this->fail( 'mcfm_not_dir', __( 'Not a directory.', 'mc-file-manager' ) );
 			}
 			$this->audit->log( 'browse', 'ok', $this->fs->resolver()->to_relative( $abs ) );
+			$entries = $this->fs->list_entries( $abs );
+			$entries = $this->revision->enrich_entries( $entries );
 			return $this->ok(
 				array(
 					'path'    => $this->fs->resolver()->to_relative( $abs ),
-					'entries' => $this->fs->list_entries( $abs ),
+					'entries' => $entries,
 				)
 			);
 		} catch ( \Exception $e ) {
@@ -508,6 +514,20 @@ class RestController {
 		}
 	}
 
+	public function delete_snapshot( WP_REST_Request $request ) {
+		$id = (int) $request->get_param( 'id' );
+		try {
+			$abs = $this->revision->original_abs_for( $id );
+			$rel = $this->fs->resolver()->to_relative( $abs );
+			$this->revision->delete_snapshot( $id );
+			$this->audit->log( 'delete', 'ok', $rel, '', 'snapshot #' . $id );
+			return $this->ok( array( 'deleted' => $id ) );
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
+			return $this->fail( 'mcfm_snapshot_delete', $e->getMessage() );
+		}
+	}
+
 	/* ------------------------------------------------------------------ *
 	 * Search
 	 * ------------------------------------------------------------------ */
@@ -546,6 +566,7 @@ class RestController {
 			}
 
 			$results = $this->advanced_search->augment( $query, $scope, $base_rel, $results );
+			$results = $this->revision->enrich_entries( $results );
 
 			$this->audit->log( 'search', 'ok', $base_rel, '', $query . ' [' . $scope . ']' );
 			return $this->ok( array( 'results' => array_slice( $results, 0, 500 ) ) );
@@ -614,6 +635,41 @@ class RestController {
 
 	public function download( WP_REST_Request $request ) {
 		return $this->stream( $request, true );
+	}
+
+	public function download_zip( WP_REST_Request $request ) {
+		$paths = $request->get_param( 'paths' );
+		if ( is_string( $paths ) ) {
+			$paths = array_filter( array_map( 'trim', explode( ',', $paths ) ) );
+		} elseif ( ! is_array( $paths ) ) {
+			$paths = array();
+		}
+
+		if ( empty( $paths ) ) {
+			return $this->fail( 'mcfm_download_zip', __( 'No paths selected.', 'mc-file-manager' ) );
+		}
+
+		try {
+			$tmp      = $this->zip->create_temp_archive( array_values( $paths ) );
+			$filename = 'download.zip';
+			if ( 1 === count( $paths ) ) {
+				$basename = basename( $paths[0] );
+				$filename = ( false === strpos( $basename, '.' ) ? $basename : pathinfo( $basename, PATHINFO_FILENAME ) ) . '.zip';
+			}
+
+			$this->audit->log( 'download', 'ok', implode( ', ', $paths ), '', 'zip archive' );
+
+			nocache_headers();
+			header( 'Content-Type: application/zip' );
+			header( 'Content-Length: ' . filesize( $tmp ) );
+			header( 'Content-Disposition: attachment; filename="' . sanitize_file_name( $filename ) . '"' );
+			readfile( $tmp ); // phpcs:ignore
+			@unlink( $tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			exit;
+		} catch ( \Exception $e ) {
+			$this->rethrow_unless_path_fs( $e );
+			return $this->fail( 'mcfm_download_zip', $e->getMessage() );
+		}
 	}
 
 	public function raw( WP_REST_Request $request ) {

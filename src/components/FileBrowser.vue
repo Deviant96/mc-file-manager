@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import { useFileManager } from '../stores/fileManager';
 import { api } from '../api/client';
 import { formatBytes, formatDate, iconFor } from '../utils/format';
@@ -9,10 +9,88 @@ const store = useFileManager();
 const emit = defineEmits(['activate', 'context', 'rename', 'properties', 'delete']);
 
 const dragOver = ref(false);
+const browserRef = ref(null);
+const rubberBand = ref(null);
+
+let dragStart = null;
+let bandActive = false;
+let suppressRowClick = false;
 
 const rows = computed(() => (store.search.active ? store.search.results : store.sortedEntries));
 
+function rectsIntersect(a, b) {
+  return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
+}
+
+function onBrowserMouseDown(e) {
+  if (e.button !== 0) return;
+  if (e.target.closest('th')) return;
+  dragStart = { x: e.clientX, y: e.clientY };
+  bandActive = false;
+  rubberBand.value = null;
+  window.addEventListener('mousemove', onBrowserMouseMove);
+  window.addEventListener('mouseup', onBrowserMouseUp);
+}
+
+function onBrowserMouseMove(e) {
+  if (!dragStart) return;
+  const dx = Math.abs(e.clientX - dragStart.x);
+  const dy = Math.abs(e.clientY - dragStart.y);
+  if (!bandActive && (dx > 4 || dy > 4)) {
+    bandActive = true;
+    if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+      store.clearSelection();
+    }
+  }
+  if (!bandActive) return;
+
+  const browser = browserRef.value;
+  if (!browser) return;
+
+  const browserRect = browser.getBoundingClientRect();
+  rubberBand.value = {
+    left: Math.min(dragStart.x, e.clientX) - browserRect.left + browser.scrollLeft,
+    top: Math.min(dragStart.y, e.clientY) - browserRect.top + browser.scrollTop,
+    width: Math.abs(e.clientX - dragStart.x),
+    height: Math.abs(e.clientY - dragStart.y),
+  };
+
+  const bandRect = {
+    left: Math.min(dragStart.x, e.clientX),
+    top: Math.min(dragStart.y, e.clientY),
+    right: Math.max(dragStart.x, e.clientX),
+    bottom: Math.max(dragStart.y, e.clientY),
+  };
+
+  const selected = [];
+  browser.querySelectorAll('.mcfm-row').forEach((row) => {
+    const rowRect = row.getBoundingClientRect();
+    if (rectsIntersect(bandRect, rowRect)) {
+      selected.push(row.dataset.path);
+    }
+  });
+  store.setSelection(selected);
+}
+
+function onBrowserMouseUp() {
+  if (bandActive) suppressRowClick = true;
+  dragStart = null;
+  bandActive = false;
+  rubberBand.value = null;
+  window.removeEventListener('mousemove', onBrowserMouseMove);
+  window.removeEventListener('mouseup', onBrowserMouseUp);
+}
+
+onBeforeUnmount(() => {
+  window.removeEventListener('mousemove', onBrowserMouseMove);
+  window.removeEventListener('mouseup', onBrowserMouseUp);
+});
+
 function onRowClick(entry, index, e) {
+  if (suppressRowClick) {
+    suppressRowClick = false;
+    return;
+  }
   store.select(entry, index, { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey });
 }
 
@@ -51,7 +129,6 @@ async function onDrop(e) {
   dragOver.value = false;
   const internal = e.dataTransfer.getData('text/mcfm-path');
   if (internal) {
-    // Internal move handled by row drop target; ignore here for the pane root.
     if (store.currentPath !== internal.split('/').slice(0, -1).join('/')) {
       try {
         await api.move(internal, store.currentPath);
@@ -75,6 +152,10 @@ async function onDrop(e) {
 }
 
 function onDragStart(entry, e) {
+  if (bandActive) {
+    e.preventDefault();
+    return;
+  }
   e.dataTransfer.setData('text/mcfm-path', entry.path);
   e.dataTransfer.effectAllowed = 'move';
 }
@@ -97,14 +178,29 @@ async function onRowDrop(targetEntry, e) {
 
 <template>
   <div
+    ref="browserRef"
     class="mcfm-browser"
-    :class="{ dragover: dragOver }"
+    :class="{ dragover: dragOver, selecting: bandActive }"
+    @mousedown="onBrowserMouseDown"
     @dragover.prevent="dragOver = true"
     @dragleave="dragOver = false"
     @drop="onDrop"
     @contextmenu="onEmptyContext"
   >
-    <SkeletonTable v-if="store.listing" />
+    <div
+      v-if="rubberBand"
+      class="mcfm-select-band"
+      :style="{
+        left: rubberBand.left + 'px',
+        top: rubberBand.top + 'px',
+        width: rubberBand.width + 'px',
+        height: rubberBand.height + 'px',
+      }"
+    ></div>
+
+    <div v-if="store.listing" class="mcfm-browser-list">
+      <SkeletonTable />
+    </div>
 
     <div v-else-if="store.listError" class="mcfm-error-state">
       <span class="dashicons dashicons-warning" style="font-size:32px;width:32px;height:32px"></span>
@@ -113,12 +209,15 @@ async function onRowDrop(targetEntry, e) {
       <button class="mcfm-btn primary" @click="store.openPath(store.currentPath)">Retry</button>
     </div>
 
-    <table v-else-if="rows.length" class="mcfm-table">
+    <div v-else-if="rows.length" class="mcfm-browser-list">
+      <table class="mcfm-table">
       <thead>
         <tr>
           <th @click="setSort('name')">Name {{ sortIndicator('name') }}</th>
           <th class="mcfm-col-size" @click="setSort('size')">Size {{ sortIndicator('size') }}</th>
           <th @click="setSort('name')">Type</th>
+          <th class="mcfm-col-snapshot">Snapshot</th>
+          <th class="mcfm-col-snapshot">Last Snapshot</th>
           <th class="mcfm-col-modified" @click="setSort('modified')">Modified {{ sortIndicator('modified') }}</th>
         </tr>
       </thead>
@@ -127,6 +226,7 @@ async function onRowDrop(targetEntry, e) {
           v-for="(entry, index) in rows"
           :key="entry.path"
           class="mcfm-row"
+          :data-path="entry.path"
           :class="{
             selected: store.isSelected(entry.path),
             cut: store.clipboard && store.clipboard.mode === 'cut' && store.clipboard.paths.includes(entry.path),
@@ -147,10 +247,13 @@ async function onRowDrop(targetEntry, e) {
           </td>
           <td class="mcfm-col-size">{{ entry.isDir ? '—' : formatBytes(entry.size) }}</td>
           <td>{{ entry.isDir ? 'Folder' : (entry.ext ? entry.ext.toUpperCase() : 'File') }}</td>
+          <td class="mcfm-col-snapshot">{{ entry.isDir ? '—' : (entry.hasSnapshot ? 'Yes' : 'No') }}</td>
+          <td class="mcfm-col-snapshot">{{ entry.isDir ? '—' : (entry.hasSnapshot && entry.lastSnapshotAt ? formatDate(entry.lastSnapshotAt) : '—') }}</td>
           <td class="mcfm-col-modified">{{ formatDate(entry.mtime) }}</td>
         </tr>
       </tbody>
-    </table>
+      </table>
+    </div>
 
     <div v-else-if="store.search.active && store.search.running" class="mcfm-empty">
       <div class="mcfm-spinner"></div>

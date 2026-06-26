@@ -11,7 +11,8 @@ const store = useFileManager();
 const data = ref(null);
 const loading = ref(true);
 
-onMounted(async () => {
+async function load() {
+  loading.value = true;
   try {
     data.value = await api.properties(props.path);
   } catch (e) {
@@ -20,7 +21,9 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
-});
+}
+
+onMounted(load);
 
 async function rollback(id) {
   try {
@@ -34,6 +37,18 @@ async function rollback(id) {
       tab.dirty = false;
     }
     emit('close');
+  } catch (e) {
+    store.notify(e.message, 'error');
+  }
+}
+
+async function removeSnapshot(id) {
+  if (!window.confirm('Delete this snapshot permanently?')) return;
+  try {
+    await api.deleteSnapshot(id);
+    store.notify('Snapshot deleted', 'success', 2000);
+    await load();
+    await store.refresh();
   } catch (e) {
     store.notify(e.message, 'error');
   }
@@ -78,7 +93,10 @@ async function rollback(id) {
                   <td>v{{ s.version }}</td>
                   <td>{{ formatBytes(s.size) }}</td>
                   <td>{{ formatDate(s.createdAt) }}</td>
-                  <td><button class="mcfm-btn" @click="rollback(s.id)">Roll back</button></td>
+                  <td style="display:flex;gap:6px;justify-content:flex-end">
+                    <button class="mcfm-btn" @click="rollback(s.id)">Roll back</button>
+                    <button class="mcfm-btn danger" @click="removeSnapshot(s.id)">Delete</button>
+                  </td>
                 </tr>
               </tbody>
             </table>

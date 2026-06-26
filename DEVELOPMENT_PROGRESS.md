@@ -173,3 +173,4 @@ See `DEVELOPMENT_PLAN.md` §13. Summary:
 - Docs: alignment pass — phase mapping table, explicit Polish/Pro/post-v1/v1.1 tracking, search scope and role folders moved to Pro, `GET /raw` documented in plan.
 - Phase 9–11 + v1.1: polish (skeletons, F5/Ctrl+F, responsive tabs, error retry), Pro hooks (recent files, search scope, role folders, upload/search abstractions), ZIP create/extract, file hashes, concurrent-edit warning via open registry.
 - FOUND_BUGS pass: context menu fix (row stopPropagation + tree), VS Code (light) theme label, search scope dark-theme colors, search clear button + debounce, disabled Pro scopes, back/forward navigation history.
+- FOUND_BUGS batch 2: activity log usernames, snapshot delete, ZIP download (multi/folder), rubber-band selection, snapshot metadata in file list.

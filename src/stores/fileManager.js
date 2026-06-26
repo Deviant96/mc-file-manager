@@ -201,6 +201,15 @@ export const useFileManager = defineStore('fileManager', {
       this.selection = [];
       this.lastSelectedIndex = -1;
     },
+    setSelection(paths) {
+      this.selection = [...paths];
+      if (paths.length === 1) {
+        const idx = this.sortedEntries.findIndex((e) => e.path === paths[0]);
+        this.lastSelectedIndex = idx >= 0 ? idx : -1;
+      } else {
+        this.lastSelectedIndex = -1;
+      }
+    },
 
     // Clipboard -------------------------------------------------------
     copySelection() {

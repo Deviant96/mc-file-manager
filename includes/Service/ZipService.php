@@ -74,6 +74,40 @@ class ZipService {
 	}
 
 	/**
+	 * Build a temporary ZIP for download (not saved into the file tree).
+	 *
+	 * @param array<int,string> $relative_paths
+	 * @throws PathException|FilesystemException|\RuntimeException
+	 */
+	public function create_temp_archive( array $relative_paths ): string {
+		if ( empty( $relative_paths ) ) {
+			throw new \RuntimeException( __( 'No paths selected.', 'mc-file-manager' ) );
+		}
+		if ( ! class_exists( 'ZipArchive' ) ) {
+			throw new \RuntimeException( __( 'ZIP support is not available on this server.', 'mc-file-manager' ) );
+		}
+
+		$zip = new \ZipArchive();
+		$tmp = wp_tempnam( 'mcfm-download.zip' );
+		if ( false === $zip->open( $tmp, \ZipArchive::CREATE | \ZipArchive::OVERWRITE ) ) {
+			throw new \RuntimeException( __( 'Could not create ZIP archive.', 'mc-file-manager' ) );
+		}
+
+		foreach ( $relative_paths as $rel ) {
+			$abs = $this->security->authorize_path( $rel );
+			$arc = $rel;
+			if ( $this->fs->is_dir( $abs ) ) {
+				$this->add_dir_to_zip( $zip, $abs, $arc );
+			} elseif ( $this->fs->exists( $abs ) ) {
+				$zip->addFile( $abs, $arc );
+			}
+		}
+
+		$zip->close();
+		return $tmp;
+	}
+
+	/**
 	 * @throws PathException|FilesystemException|\RuntimeException
 	 */
 	public function extract( string $archive_relative, string $destination_relative ): array {

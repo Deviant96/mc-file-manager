@@ -47,6 +47,25 @@ class AuditService {
 	 * @return array{items:array<int,array<string,mixed>>,total:int}
 	 */
 	public function paginate( int $page, int $per_page, string $action = '' ): array {
-		return $this->repo->paginate( $page, $per_page, $action );
+		$result = $this->repo->paginate( $page, $per_page, $action );
+		$result['items'] = $this->enrich_items( $result['items'] );
+		return $result;
+	}
+
+	/**
+	 * @param array<int,array<string,mixed>> $items
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function enrich_items( array $items ): array {
+		return array_map(
+			static function ( array $row ): array {
+				$user_id = (int) ( $row['user_id'] ?? 0 );
+				$user    = $user_id > 0 ? get_userdata( $user_id ) : false;
+				$row['username']     = $user ? $user->user_login : '';
+				$row['display_name'] = $user ? $user->display_name : __( 'Unknown', 'mc-file-manager' );
+				return $row;
+			},
+			$items
+		);
 	}
 }

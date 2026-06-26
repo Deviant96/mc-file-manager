@@ -116,6 +116,9 @@ export const api = {
   restoreSnapshot(id) {
     return request('/snapshot/restore', { method: 'POST', body: { id } });
   },
+  deleteSnapshot(id) {
+    return request(`/snapshot/${id}`, { method: 'DELETE' });
+  },
   search(query, path, scope = 'down') {
     return request('/search', { params: { query, path, scope } });
   },
@@ -151,6 +154,10 @@ export const api = {
   },
   downloadUrl(path) {
     return this.rawUrl('/download', { path });
+  },
+  downloadZipUrl(paths) {
+    const list = Array.isArray(paths) ? paths : [paths];
+    return this.rawUrl('/download-zip', { paths: list.join(',') });
   },
   rawFileUrl(path) {
     return this.rawUrl('/raw', { path });

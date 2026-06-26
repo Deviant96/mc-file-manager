@@ -106,6 +106,54 @@ class RevisionService {
 	}
 
 	/**
+	 * Delete a snapshot row and its on-disk file.
+	 */
+	public function delete_snapshot( int $id ): void {
+		$row = $this->repo->find( $id );
+		if ( ! $row ) {
+			throw new FilesystemException( 'Snapshot not found.' );
+		}
+		if ( file_exists( $row['snapshot_path'] ) ) {
+			@unlink( $row['snapshot_path'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		}
+		$this->repo->delete( $id );
+	}
+
+	/**
+	 * Attach snapshot summary fields to directory listing entries.
+	 *
+	 * @param array<int,array<string,mixed>> $entries
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function enrich_entries( array $entries ): array {
+		$file_paths = array();
+		foreach ( $entries as $entry ) {
+			if ( empty( $entry['isDir'] ) && ! empty( $entry['path'] ) ) {
+				$file_paths[] = (string) $entry['path'];
+			}
+		}
+
+		$summaries = $this->repo->summaries_for_paths( $file_paths );
+
+		foreach ( $entries as &$entry ) {
+			if ( ! empty( $entry['isDir'] ) ) {
+				$entry['hasSnapshot']    = false;
+				$entry['lastSnapshotAt'] = null;
+				$entry['snapshotCount']  = 0;
+				continue;
+			}
+			$path   = (string) ( $entry['path'] ?? '' );
+			$meta   = $summaries[ $path ] ?? null;
+			$entry['hasSnapshot']    = $meta ? $meta['hasSnapshot'] : false;
+			$entry['lastSnapshotAt'] = $meta ? $meta['lastSnapshotAt'] : null;
+			$entry['snapshotCount']  = $meta ? $meta['snapshotCount'] : 0;
+		}
+		unset( $entry );
+
+		return $entries;
+	}
+
+	/**
 	 * Keep only the newest N snapshots for a path; delete older files + rows.
 	 */
 	private function prune( string $hash ): void {

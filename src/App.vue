@@ -192,6 +192,21 @@ function deleteEntries(paths) {
   });
 }
 
+function downloadPaths(paths, hintEntry = null) {
+  if (!paths.length) return;
+  const needsZip =
+    paths.length > 1 ||
+    paths.some((p) => {
+      const e = store.entries.find((x) => x.path === p) || (hintEntry?.path === p ? hintEntry : null);
+      return e?.isDir;
+    });
+  if (needsZip) {
+    window.open(api.downloadZipUrl(paths), '_blank');
+  } else {
+    window.open(api.downloadUrl(paths[0]), '_blank');
+  }
+}
+
 function handleContextAction(action) {
   const entry = contextMenu.entry;
   closeContext();
@@ -216,7 +231,7 @@ function handleContextAction(action) {
       store.paste();
       break;
     case 'download':
-      if (entry && !entry.isDir) window.open(api.downloadUrl(entry.path), '_blank');
+      downloadPaths(targets, entry);
       break;
     case 'extract':
       if (entry) extractZip(entry);
@@ -344,6 +359,7 @@ onBeforeUnmount(() => {
         :y="contextMenu.y"
         :entry="contextMenu.entry"
         :has-clipboard="!!store.clipboard"
+        :selection-count="store.selection.length"
         @action="handleContextAction"
       />
 

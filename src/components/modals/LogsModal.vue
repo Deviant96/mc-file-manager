@@ -51,11 +51,12 @@ onMounted(load);
         <div v-if="loading" class="mcfm-spinner"></div>
         <table v-else class="mcfm-list">
           <thead>
-            <tr><th>When</th><th>Action</th><th>Status</th><th>Path</th></tr>
+            <tr><th>When</th><th>User</th><th>Action</th><th>Status</th><th>Path</th></tr>
           </thead>
           <tbody>
             <tr v-for="row in items" :key="row.id">
               <td style="white-space:nowrap">{{ formatDate(row.created_at) }}</td>
+              <td style="white-space:nowrap">{{ row.display_name || row.username || '—' }}</td>
               <td>{{ row.action }}</td>
               <td><span class="badge" :class="row.status">{{ row.status }}</span></td>
               <td>{{ row.source_path ? row.source_path + ' → ' : '' }}{{ row.target_path }}</td>

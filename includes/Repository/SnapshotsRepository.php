@@ -69,4 +69,37 @@ class SnapshotsRepository {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->delete( $table, array( 'id' => $id ), array( '%d' ) );
 	}
+
+	/**
+	 * Snapshot counts and latest timestamp keyed by original_path.
+	 *
+	 * @param array<int,string> $paths
+	 * @return array<string,array{hasSnapshot:bool,lastSnapshotAt:?string,snapshotCount:int}>
+	 */
+	public function summaries_for_paths( array $paths ): array {
+		$paths = array_values( array_filter( array_map( 'strval', $paths ) ) );
+		if ( empty( $paths ) ) {
+			return array();
+		}
+
+		global $wpdb;
+		$table        = Database::snapshots_table();
+		$placeholders = implode( ',', array_fill( 0, count( $paths ), '%s' ) );
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		$sql  = "SELECT original_path, COUNT(*) AS snapshot_count, MAX(created_at) AS last_snapshot_at
+			FROM {$table} WHERE original_path IN ({$placeholders}) GROUP BY original_path";
+		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $paths ), ARRAY_A );
+		// phpcs:enable
+
+		$map = array();
+		foreach ( $rows ? $rows : array() as $row ) {
+			$path          = (string) $row['original_path'];
+			$map[ $path ] = array(
+				'hasSnapshot'    => ( (int) $row['snapshot_count'] ) > 0,
+				'lastSnapshotAt' => $row['last_snapshot_at'] ? (string) $row['last_snapshot_at'] : null,
+				'snapshotCount'  => (int) $row['snapshot_count'],
+			);
+		}
+		return $map;
+	}
 }

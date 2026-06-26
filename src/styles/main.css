@@ -225,6 +225,20 @@ body.folded #mcfm-app { left: 36px; }
 /* File browser ------------------------------------------------------- */
 .mcfm-browser { flex: 1; overflow: auto; position: relative; }
 .mcfm-browser.dragover { outline: 2px dashed var(--mcfm-accent); outline-offset: -6px; }
+.mcfm-browser.selecting { user-select: none; cursor: crosshair; }
+.mcfm-select-band {
+  position: absolute;
+  border: 1px solid var(--mcfm-accent);
+  background: color-mix(in srgb, var(--mcfm-accent) 18%, transparent);
+  pointer-events: none;
+  z-index: 2;
+}
+/* Padded list area: room for rubber-band select below/alongside rows */
+.mcfm-browser-list {
+  min-height: 100%;
+  padding: 6px 10px 140px;
+  box-sizing: border-box;
+}
 .mcfm-table { width: 100%; border-collapse: collapse; }
 .mcfm-table th {
   position: sticky;
@@ -249,7 +263,7 @@ body.folded #mcfm-app { left: 36px; }
 .mcfm-name-text { overflow: hidden; text-overflow: ellipsis; }
 .mcfm-icon-folder { color: #dcb67a; }
 .mcfm-icon-file { color: #8a9bb0; }
-.mcfm-col-size, .mcfm-col-modified { color: var(--mcfm-text-dim); font-size: 12px; }
+.mcfm-col-size, .mcfm-col-modified, .mcfm-col-snapshot { color: var(--mcfm-text-dim); font-size: 12px; }
 
 .mcfm-empty {
   display: flex;
