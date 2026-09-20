@@ -2,6 +2,8 @@ import { defineStore } from 'pinia';
 import { api } from '../api/client';
 
 let notificationId = 0;
+const openingPaths = new Set();
+let deleteInFlight = false;
 
 export const useFileManager = defineStore('fileManager', {
   state: () => ({
@@ -269,6 +271,8 @@ export const useFileManager = defineStore('fileManager', {
       }
     },
     async deletePaths(paths) {
+      if (deleteInFlight || !paths.length) return;
+      deleteInFlight = true;
       try {
         const res = await api.remove(paths);
         if (res.errors && res.errors.length) {
@@ -281,9 +285,13 @@ export const useFileManager = defineStore('fileManager', {
         }
         await this.refresh();
         await this.refreshTreeNode(this.currentPath);
-        this.notify(`Deleted ${deleted.length} item(s)`, 'success', 2000);
+        if (deleted.length) {
+          this.notify(`Deleted ${deleted.length} item(s)`, 'success', 2000);
+        }
       } catch (e) {
         this.notify(e.message, 'error');
+      } finally {
+        deleteInFlight = false;
       }
     },
 
@@ -314,8 +322,23 @@ export const useFileManager = defineStore('fileManager', {
         this.registerEditorOpen(entry.path);
         return existing;
       }
+      // Guard concurrent opens of the same path (double-click / double confirm).
+      if (openingPaths.has(entry.path)) {
+        return null;
+      }
+      openingPaths.add(entry.path);
       try {
+        // Re-check after awaiting in case another call finished first.
+        const again = this.tabs.find((t) => t.path === entry.path);
+        if (again) {
+          this.activeTab = entry.path;
+          return again;
+        }
         const data = await api.readFile(entry.path);
+        if (this.tabs.some((t) => t.path === entry.path)) {
+          this.activeTab = entry.path;
+          return this.tabs.find((t) => t.path === entry.path);
+        }
         const tab = {
           path: entry.path,
           name: data.entry.name,
@@ -336,6 +359,8 @@ export const useFileManager = defineStore('fileManager', {
       } catch (e) {
         this.notify(e.message, 'error');
         return null;
+      } finally {
+        openingPaths.delete(entry.path);
       }
     },
     setTabContent(path, content) {

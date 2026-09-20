@@ -428,6 +428,7 @@ body.folded #mcfm-app { left: 36px; }
 }
 .mcfm-toast {
   background: var(--mcfm-bg-elevated);
+  color: var(--mcfm-text);
   border: 1px solid var(--mcfm-border);
   border-left: 3px solid var(--mcfm-accent);
   border-radius: var(--mcfm-radius);
@@ -438,9 +439,10 @@ body.folded #mcfm-app { left: 36px; }
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
   cursor: pointer;
 }
-.mcfm-toast.error { border-left-color: var(--mcfm-danger); }
-.mcfm-toast.success { border-left-color: var(--mcfm-success); }
-.mcfm-toast.warning { border-left-color: var(--mcfm-warning); }
+.mcfm-toast--error { border-left-color: var(--mcfm-danger); }
+.mcfm-toast--success { border-left-color: var(--mcfm-success); }
+.mcfm-toast--warning { border-left-color: var(--mcfm-warning); }
+.mcfm-toast--info { border-left-color: var(--mcfm-accent); }
 
 .mcfm-spinner {
   width: 18px; height: 18px;

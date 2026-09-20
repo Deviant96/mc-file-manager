@@ -169,6 +169,7 @@ See `DEVELOPMENT_PLAN.md` §13. Summary:
 - Backend: bootstrap, autoloader, DB tables, security/path resolver, filesystem driver + service, repositories, audit/trash/revision/preview/settings services, full REST API, activator/uninstall.
 - Frontend: Vue 3 SPA (toolbar, tree, browser, breadcrumbs, editor, preview, status bar, context menu, toasts, modals), Pinia store, nonce-aware API client, Monaco editor.
 - Build: Vite pipeline configured and producing assets; theme variables fixed to mount element; relative asset base for fonts/workers.
+- Fix: guard double delete/open (modal one-shot, in-flight locks); toast classes no longer clash with WP `.error` (contrast).
 - PHP 7.4: lowered minimum from 8.2; replaced union catch types in `RestController` with a PHP 7.4-safe helper; updated plugin header and `readme.txt`.
 - Docs: alignment pass — phase mapping table, explicit Polish/Pro/post-v1/v1.1 tracking, search scope and role folders moved to Pro, `GET /raw` documented in plan.
 - Phase 9–11 + v1.1: polish (skeletons, F5/Ctrl+F, responsive tabs, error retry), Pro hooks (recent files, search scope, role folders, upload/search abstractions), ZIP create/extract, file hashes, concurrent-edit warning via open registry.

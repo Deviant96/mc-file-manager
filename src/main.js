@@ -5,7 +5,9 @@ import './styles/main.css';
 
 const mountEl = document.getElementById('mcfm-app');
 
-if (mountEl) {
+// Guard against WordPress loading the module more than once.
+if (mountEl && !mountEl.__mcfmMounted) {
+  mountEl.__mcfmMounted = true;
   const app = createApp(App);
   app.use(createPinia());
   app.mount(mountEl);

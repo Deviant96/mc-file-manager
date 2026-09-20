@@ -11,6 +11,7 @@ const emit = defineEmits(['confirm', 'cancel']);
 
 const input = ref(props.value);
 const field = ref(null);
+const settled = ref(false);
 
 onMounted(() => {
   field.value && field.value.focus();
@@ -18,13 +19,21 @@ onMounted(() => {
 });
 
 function submit() {
+  if (settled.value) return;
+  settled.value = true;
   emit('confirm', input.value.trim());
+}
+
+function cancel() {
+  if (settled.value) return;
+  settled.value = true;
+  emit('cancel');
 }
 </script>
 
 <template>
-  <div class="mcfm-overlay" @click.self="emit('cancel')">
-    <div class="mcfm-modal" @keydown.enter="submit" @keydown.esc="emit('cancel')">
+  <div class="mcfm-overlay" @click.self="cancel">
+    <div class="mcfm-modal" @keydown.enter.prevent="submit" @keydown.esc="cancel">
       <div class="mcfm-modal-head">{{ title }}</div>
       <div class="mcfm-modal-body">
         <div class="mcfm-field">
@@ -33,8 +42,8 @@ function submit() {
         </div>
       </div>
       <div class="mcfm-modal-foot">
-        <button class="mcfm-btn" @click="emit('cancel')">Cancel</button>
-        <button class="mcfm-btn primary" @click="submit">{{ confirmLabel }}</button>
+        <button type="button" class="mcfm-btn" :disabled="settled" @click="cancel">Cancel</button>
+        <button type="button" class="mcfm-btn primary" :disabled="settled" @click="submit">{{ confirmLabel }}</button>
       </div>
     </div>
   </div>

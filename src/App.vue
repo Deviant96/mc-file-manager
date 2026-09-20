@@ -368,13 +368,13 @@ onBeforeUnmount(() => {
       <PromptModal
         v-if="modals.prompt"
         v-bind="modals.prompt"
-        @confirm="(val) => { modals.prompt.onConfirm(val); modals.prompt = null; }"
+        @confirm="(val) => { const fn = modals.prompt?.onConfirm; modals.prompt = null; fn && fn(val); }"
         @cancel="modals.prompt = null"
       />
       <ConfirmModal
         v-if="modals.confirm"
         v-bind="modals.confirm"
-        @confirm="() => { modals.confirm.onConfirm(); modals.confirm = null; }"
+        @confirm="() => { const fn = modals.confirm?.onConfirm; modals.confirm = null; fn && fn(); }"
         @cancel="modals.confirm = null"
       />
       <PropertiesModal

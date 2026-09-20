@@ -11,7 +11,7 @@ const store = useFileManager();
         v-for="n in store.notifications"
         :key="n.id"
         class="mcfm-toast"
-        :class="n.type"
+        :class="'mcfm-toast--' + (n.type || 'info')"
         @click="store.dismiss(n.id)"
       >
         {{ n.message }}
