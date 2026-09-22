@@ -33,12 +33,14 @@ tricks, null bytes, and symlink escapes.
 
 == Build (developers) ==
 
-The production site does not require Node.js. To rebuild the SPA:
+The production site does not require Node.js. To rebuild the SPA and a lean install zip:
 
     npm install
-    npm run build
+    npm run package
 
-Compiled assets are written to `assets/build/`.
+This writes `dist/mc-file-manager.zip` (~1 MB). Do **not** zip the whole repo — that includes `node_modules` and is tens of megabytes.
+
+Compiled assets alone: `npm run build` → `assets/build/`.
 
 == Changelog ==
 
